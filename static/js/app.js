@@ -1,7 +1,8 @@
 document.addEventListener('DOMContentLoaded', function () {
-    formSubscribe();
+    loginFormSubscribe();
     inputSubscribe();
     logoutSubscribe();
+    signupLinkSubscribe()
 });
 
 function getCookie(name) {
@@ -20,12 +21,12 @@ function getCookie(name) {
     return cookieValue;
 }
 
-function formSubscribe() {
+function loginFormSubscribe() {
     const form = document.querySelector('.login-form');
     if (form === null) {
         return;
     }
-    const messageDiv = document.getElementById('message');
+    const infoDiv = document.querySelector('.info');
 
     form.addEventListener('submit', async function (event) {
         event.preventDefault();
@@ -51,10 +52,10 @@ function formSubscribe() {
                 inputSubscribe();
                 logoutSubscribe();
             } else {
-                messageDiv.innerHTML = "<p style='color: red'>" + data.message + "</p>";
+                infoDiv.innerHTML = "<p style='color: red'>" + data.message + "</p>";
             }
         } catch (error) {
-            messageDiv.innerHTML = "<p style='color: red'>Произошла ошибка!</p>";
+            infoDiv.innerHTML = "<p style='color: red'>Произошла ошибка!</p>";
             console.error('Ошибка:', error);
         }
     });
@@ -166,7 +167,7 @@ function inputSubscribe() {
     });
 }
 
-function logoutSubscribe(){
+function logoutSubscribe() {
     const logoutButton = document.querySelector('.logout');
     if (logoutButton === null) {
         return;
@@ -184,7 +185,7 @@ function logoutSubscribe(){
             if (data.success) {
                 removeBodyElements();
                 createLoginElements();
-                formSubscribe();
+                loginFormSubscribe();
             }
         } catch (error) {
             console.error('Ошибка:', error);
@@ -246,7 +247,148 @@ function createLoginElements() {
     loginButton.textContent = 'Войти';
     loginForm.appendChild(loginButton);
 
-    const message = document.createElement('div');
-    message.id = 'message';
-    container.appendChild(message);
+    const signupDiv = document.createElement('div');
+    signupDiv.classList.add('signup-link')
+    container.appendChild(signupDiv);
+
+    const pSignup = document.createElement('p');
+    pSignup.textContent = 'Нет аккаунта?';
+    signupDiv.appendChild(pSignup);
+
+    const aSignup = document.createElement('a');
+    aSignup.href = '#';
+    aSignup.textContent = 'Регистрация';
+    signupDiv.appendChild(aSignup);
+
+    const info = document.createElement('div');
+    info.classList.add('info');
+    container.appendChild(info);
+}
+
+function signupLinkSubscribe() {
+    const signupLink = document.querySelector('.signup-link a');
+    if (signupLink === null) {
+        return;
+    }
+    signupLink.addEventListener('click', async function (event) {
+        event.preventDefault();
+        removeBodyElements();
+        createSignupElements();
+        signupFormSubscribe();
+    });
+}
+
+function createSignupElements() {
+    const body = document.body;
+    const container = document.createElement('div');
+    container.classList.add('container');
+    container.classList.add('signup-container');
+    body.appendChild(container);
+
+    const h2 = document.createElement('h2');
+    h2.classList.add('h2');
+    h2.textContent = `Регистрация`;
+    container.appendChild(h2);
+
+    const signupForm = document.createElement('form');
+    signupForm.classList.add('signup-form');
+    container.appendChild(signupForm);
+
+    const pUsername = document.createElement('p');
+    signupForm.appendChild(pUsername);
+
+    const idUsername = document.createElement('label');
+    idUsername.htmlFor = 'id_username';
+    idUsername.textContent = `Имя пользователя:`;
+    pUsername.appendChild(idUsername);
+
+    const username = document.createElement('input');
+    username.type = 'text';
+    username.name = 'username';
+    username.maxLength = 150;
+    username.required = true;
+    username.id = 'id_username';
+    pUsername.appendChild(username);
+
+    const pPassword = document.createElement('p');
+    signupForm.appendChild(pPassword);
+
+    const idPassword = document.createElement('label');
+    idPassword.htmlFor = 'id_password';
+    idPassword.textContent = `Пароль:`;
+    pPassword.appendChild(idPassword);
+
+    const password = document.createElement('input');
+    password.type = 'password';
+    password.name = 'password';
+    password.maxLength = 128;
+    password.required = true;
+    password.id = 'id_password';
+    pPassword.appendChild(password);
+
+    const pPasswordCheck = document.createElement('p');
+    signupForm.appendChild(pPasswordCheck);
+
+    const idPasswordCheck = document.createElement('label');
+    idPasswordCheck.htmlFor = 'id_password_check';
+    idPasswordCheck.textContent = `Подтвердите пароль:`;
+    pPasswordCheck.appendChild(idPasswordCheck);
+
+    const passwordCheck = document.createElement('input');
+    passwordCheck.type = 'password';
+    passwordCheck.name = 'password_check';
+    passwordCheck.maxLength = 128;
+    passwordCheck.required = true;
+    passwordCheck.id = 'id_password_check';
+    pPasswordCheck.appendChild(passwordCheck);
+
+    const signupButton = document.createElement('button');
+    signupButton.type = 'submit';
+    signupButton.classList.add('btn-signup');
+    signupButton.textContent = 'Зарегистрироваться';
+    signupForm.appendChild(signupButton);
+
+    const info = document.createElement('div');
+    info.classList.add('info');
+    container.appendChild(info);
+}
+
+function signupFormSubscribe() {
+    const form = document.querySelector('.signup-form');
+    if (form === null) {
+        return;
+    }
+    const infoDiv = document.querySelector('.info');
+
+    form.addEventListener('submit', async function (event) {
+        event.preventDefault();
+
+        const formData = new FormData(form);
+        const csrfToken = getCookie('csrftoken');
+
+        try {
+            const response = await fetch('/api/signup/', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken,
+                    'Accept': 'application/json',
+                },
+                mode: 'same-origin',
+                body: formData
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                removeBodyElements();
+                createChatElements();
+                inputSubscribe();
+                logoutSubscribe();
+            } else {
+                infoDiv.innerHTML = "<p style='color: red'>" + data.message + "</p>";
+            }
+        } catch (error) {
+            infoDiv.innerHTML = "<p style='color: red'>Произошла ошибка!</p>";
+            console.error('Ошибка:', error);
+        }
+    });
 }
