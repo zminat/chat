@@ -1,8 +1,9 @@
 document.addEventListener('DOMContentLoaded', function () {
     loginFormSubscribe();
-    inputSubscribe();
+    signupLinkSubscribe();
     logoutSubscribe();
-    signupLinkSubscribe()
+    newChatSubscribe();
+    inputSubscribe();
 });
 
 function getCookie(name) {
@@ -95,6 +96,15 @@ function createChatElements() {
     logoutButton.textContent = 'Выйти';
     dropdownMenu.appendChild(logoutButton);
 
+    const createChatDiv = document.createElement('div');
+    createChatDiv.classList.add('create-chat');
+    sidebar.appendChild(createChatDiv);
+
+    const createChatImage = document.createElement('img');
+    createChatImage.src = "/static/images/create-chat-icon.png";
+    createChatImage.alt = "Создать беседу";
+    createChatDiv.appendChild(createChatImage);
+
     const h3 = document.createElement('h3');
     h3.classList.add('h3');
     h3.textContent = `Беседы`;
@@ -186,6 +196,7 @@ function logoutSubscribe() {
                 removeBodyElements();
                 createLoginElements();
                 loginFormSubscribe();
+                signupLinkSubscribe();
             }
         } catch (error) {
             console.error('Ошибка:', error);
@@ -383,11 +394,137 @@ function signupFormSubscribe() {
                 createChatElements();
                 inputSubscribe();
                 logoutSubscribe();
+                newChatSubscribe();
             } else {
                 infoDiv.innerHTML = "<p style='color: red'>" + data.message + "</p>";
             }
         } catch (error) {
             infoDiv.innerHTML = "<p style='color: red'>Произошла ошибка!</p>";
+            console.error('Ошибка:', error);
+        }
+    });
+}
+
+function newChatSubscribe() {
+    const createNewChatDiv = document.querySelector('.create-chat');
+    if (createNewChatDiv === null) {
+        return;
+    }
+    createNewChatDiv.addEventListener('click', async function () {
+        try {
+            const response = await fetch('/api/userlist/', {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json'
+                }
+            });
+
+            const users = await response.json();
+            if (users.length !== 0) {
+                createNewChatElements(users);
+                closeCreateNewChatSubscribe();
+                createNewChatFormSubscribe();
+            }
+        } catch (error) {
+            console.error('Ошибка:', error);
+        }
+    });
+}
+
+function createNewChatElements(users) {
+    const body = document.body;
+    const modal = document.createElement('div');
+    modal.classList.add('modal');
+    body.appendChild(modal);
+
+    const modalContent = document.createElement('div');
+    modalContent.classList.add('modal-content');
+    modal.appendChild(modalContent);
+
+    const closeModal = document.createElement('span');
+    closeModal.classList.add('close');
+    closeModal.innerHTML = '&times;';
+    modalContent.appendChild(closeModal);
+
+    const h3 = document.createElement('h3');
+    h3.classList.add('h2');
+    h3.textContent = `Создать новую беседу`;
+    modalContent.appendChild(h3);
+
+    const createChatForm = document.createElement('form');
+    createChatForm.classList.add('create-chat-form');
+    modalContent.appendChild(createChatForm);
+
+    const selectUsersLabel = document.createElement('label');
+    selectUsersLabel.htmlFor =  'users';
+    selectUsersLabel.textContent = 'Выберите пользователей:';
+    createChatForm.appendChild(selectUsersLabel);
+
+    const userList = document.createElement('div');
+    userList.classList.add('user-list');
+    createChatForm.appendChild(userList);
+
+    for (let user of users){
+        const userItem = document.createElement('div');
+        userItem.classList.add('user-item');
+        userList.appendChild(userItem);
+
+        const userItemCheckbox = document.createElement('input');
+        userItemCheckbox.type = 'checkbox';
+        userItemCheckbox.name = 'users';
+        userItemCheckbox.value = user.id;
+        userItem.appendChild(userItemCheckbox);
+
+        const userItemLabel = document.createElement('label');
+        userItemLabel.htmlFor = user.id;
+        userItemLabel.textContent = user.username;
+        userItem.appendChild(userItemLabel);
+    }
+
+    const createChatFormButton = document.createElement('button');
+    createChatFormButton.type = 'submit';
+    createChatFormButton.classList.add('btn-create-chat');
+    createChatFormButton.textContent = 'Создать беседу';
+    createChatForm.appendChild(createChatFormButton);
+}
+
+function closeCreateNewChatSubscribe() {
+    const closeModal = document.querySelector('.close');
+    closeModal.addEventListener('click', function () {
+        const modal = document.querySelector('.modal');
+        modal.remove();
+    });
+}
+
+function createNewChatFormSubscribe() {
+    const form = document.querySelector('.create-chat-form');
+    if (form === null) {
+        return;
+    }
+    // const infoDiv = document.querySelector('.info');
+
+    form.addEventListener('submit', async function (event) {
+        event.preventDefault();
+
+        const formData = new FormData(form);
+        const csrfToken = getCookie('csrftoken');
+
+        try {
+            const response = await fetch('/api/createchat/', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken,
+                    'Accept': 'application/json',
+                },
+                mode: 'same-origin',
+                body: formData
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                console.log('Success');
+            }
+        } catch (error) {
             console.error('Ошибка:', error);
         }
     });

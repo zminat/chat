@@ -29,7 +29,7 @@ body {
 
 h2 {
     margin-bottom: 20px;
-    color: #007bff;
+    color: #343a40;
 }
 
 .login-form, .signup-form {
@@ -245,3 +245,105 @@ h2 {
 .dropdown-menu:hover {
     display: block; /* Показываем меню при наведении на аватар или меню */
 }
+
+.create-chat {
+    position: absolute;
+    top: 10px;
+    right: 20px;
+}
+
+.create-chat img {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    object-fit: cover;
+    cursor: pointer;
+}
+
+.create-chat img:hover {
+    transform: scale(1.1);
+}
+
+.modal {
+    display: block; /* Скрыто по умолчанию */
+    /*display: none; !* Скрыто по умолчанию *!*/
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+}
+
+.modal-content {
+    background-color: #fff;
+    margin: 15% auto;
+    padding: 20px;
+    border: 1px solid #888;
+    width: 400px;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.modal-content h3 {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.user-list {
+    overflow: auto;
+    height: 210px;
+}
+
+.modal-content label {
+    display: block;
+    margin: 10px 0;
+}
+
+.modal-content select, .modal-content .user-item {
+    padding: 10px;
+    margin-bottom: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    display: flex;
+    align-items: center;
+    background-color: #f9f9f9;
+}
+
+.modal-content .user-item input[type="checkbox"] {
+    margin-right: 10px;
+}
+
+.btn-create-chat {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 10px;
+    cursor: pointer;
+    font-size: 16px;
+    width: 100%;
+    border-radius: 5px;
+    transition: background-color 0.3s ease;
+}
+
+.btn-create-chat:hover {
+    background-color: #0056b3;
+}
+
+/* Кнопка закрытия модального окна */
+.close {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.close:hover,
+.close:focus {
+    color: black;
+    text-decoration: none;
+    cursor: pointer;
+}
+
