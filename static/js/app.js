@@ -5,6 +5,7 @@ document.addEventListener('DOMContentLoaded', function () {
     newChatSubscribe();
     inputSubscribe();
     chatItemsSubscribe();
+    initializeChat();
 });
 
 function getCookie(name) {
@@ -586,5 +587,68 @@ function chatItemSubscribe(chatItem) {
         const chatItems = document.querySelectorAll('.chat-item');
         chatItems.forEach(i => i.classList.remove('selected'));
         this.classList.add('selected');
+        initializeChat();
     });
+}
+
+function initializeChat() {
+    const selectedChatItem = document.querySelector('.chat-item.selected');
+
+    if (selectedChatItem === null) {
+        return;
+    }
+
+    const chatId = selectedChatItem.dataset.chatId;
+    const socket = new WebSocket(`ws://${window.location.host}/ws/chat/${chatId}/`, [], {
+        headers: {
+            'Cookie': document.cookie
+        }
+    });
+
+    socket.onopen = () => {
+        console.log('Соединение с WebSocket установлено');
+    };
+
+    socket.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        if (data.type === 'chat_message') {
+            addMessageToChat(data.message, 'received');
+        }
+    };
+
+    socket.onclose = () => {
+        console.log('Соединение с WebSocket закрыто');
+    };
+
+    const sendButton = document.querySelector('.chat-input button');
+    const messageInput = document.querySelector('.chat-input input');
+
+    sendButton.addEventListener('click', () => {
+        const message = messageInput.value;
+        if (message) {
+            sendMessage(socket, message);
+            messageInput.value = '';
+        }
+    });
+
+    messageInput.addEventListener('input', function () {
+        sendButton.disabled = messageInput.value.trim() === '';
+    });
+}
+
+function sendMessage(socket, message) {
+    socket.send(JSON.stringify({
+        type: 'message',
+        message: message,
+    }));
+    addMessageToChat(message, 'sent');
+}
+
+function addMessageToChat(message, messageType) {
+    const chatMessages = document.querySelector('.chat-messages');
+    const messageDiv = document.createElement('div');
+    messageDiv.classList.add('message', messageType);
+    messageDiv.textContent = message;
+    chatMessages.appendChild(messageDiv);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
 }
