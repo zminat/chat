@@ -1,23 +1,27 @@
-(function() {
-    let socket = null;
+class ChatApp {
+    constructor() {
+        this.socket = null;
+        this.init();
+    }
 
-    document.addEventListener('DOMContentLoaded', function () {
-        loginFormSubscribe();
-        signupLinkSubscribe();
-        logoutSubscribe();
-        newChatSubscribe();
-        chatItemsSubscribe();
-        selectFirstChat();
-    });
+    init() {
+        document.addEventListener('DOMContentLoaded', async () => {
+            this.loginFormSubscribe();
+            this.signupLinkSubscribe();
+            this.logoutSubscribe();
+            this.newChatSubscribe();
+            this.chatItemsSubscribe();
+            this.selectFirstChat();
+        });
+    }
 
-    function getCookie(name) {
+    getCookie(name) {
         let cookieValue = null;
         if (document.cookie && document.cookie !== '') {
             const cookies = document.cookie.split(';');
             for (let i = 0; i < cookies.length; i++) {
                 const cookie = cookies[i].trim();
-                // Does this cookie string begin with the name we want?
-                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                if (cookie.startsWith(`${name}=`)) {
                     cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
                     break;
                 }
@@ -26,18 +30,15 @@
         return cookieValue;
     }
 
-    function loginFormSubscribe() {
+    loginFormSubscribe() {
         const form = document.querySelector('.login-form');
-        if (form === null) {
-            return;
-        }
+        if (!form) return;
+
         const infoDiv = document.querySelector('.info');
-
-        form.addEventListener('submit', async function (event) {
+        form.addEventListener('submit', async (event) => {
             event.preventDefault();
-
             const formData = new FormData(form);
-            const csrfToken = getCookie('csrftoken');
+            const csrfToken = this.getCookie('csrftoken');
 
             try {
                 const response = await fetch('/api/login/', {
@@ -52,39 +53,35 @@
 
                 const data = await response.json();
                 if (response.ok) {
-                    removeBodyElements();
-                    createChatElements();
-                    logoutSubscribe();
-                    await fillChatList();
-                    selectFirstChat();
+                    this.removeBodyElements();
+                    this.createChatElements();
+                    this.logoutSubscribe();
+                    await this.fillChatList();
+                    this.selectFirstChat();
                 } else {
-                    infoDiv.innerHTML = "<p style='color: red'>" + data.message + "</p>";
+                    infoDiv.innerHTML = `<p style="color: red">${data.message}</p>`;
                     console.error('Ошибка:', data.message);
                 }
             } catch (error) {
-                infoDiv.innerHTML = "<p style='color: red'>Произошла ошибка!</p>";
+                infoDiv.innerHTML = `<p style="color: red">Произошла ошибка!</p>`;
                 console.error('Ошибка:', error);
             }
         });
     }
 
-    function removeBodyElements() {
-        document.body.innerHTML = "";
+    removeBodyElements() {
+        document.body.innerHTML = '';
     }
 
-    function createChatElements() {
+    createChatElements() {
         const body = document.body;
-        const container = document.createElement('div');
-        container.classList.add('container');
-        container.classList.add('messenger-container');
+        const container = this.createElementWithClasses('div', ['container', 'messenger-container']);
         body.appendChild(container);
 
-        const sidebar = document.createElement('div');
-        sidebar.classList.add('sidebar');
+        const sidebar = this.createElementWithClasses('div', ['sidebar']);
         container.appendChild(sidebar);
 
-        const avatar = document.createElement('div');
-        avatar.classList.add('avatar');
+        const avatar = this.createElementWithClasses('div', ['avatar']);
         sidebar.appendChild(avatar);
 
         const avatarImage = document.createElement('img');
@@ -92,18 +89,14 @@
         avatarImage.alt = "Аватар";
         avatar.appendChild(avatarImage);
 
-        const dropdownMenu = document.createElement('div');
-        dropdownMenu.classList.add('dropdown-menu');
+        const dropdownMenu = this.createElementWithClasses('div', ['dropdown-menu']);
         avatar.appendChild(dropdownMenu);
 
-        const logoutButton = document.createElement('button');
-        logoutButton.classList.add('dropdown-item');
-        logoutButton.classList.add('logout');
+        const logoutButton = this.createElementWithClasses('button', ['dropdown-item', 'logout']);
         logoutButton.textContent = 'Выйти';
         dropdownMenu.appendChild(logoutButton);
 
-        const createChatDiv = document.createElement('div');
-        createChatDiv.classList.add('create-chat');
+        const createChatDiv = this.createElementWithClasses('div', ['create-chat']);
         sidebar.appendChild(createChatDiv);
 
         const createChatImage = document.createElement('img');
@@ -111,46 +104,27 @@
         createChatImage.alt = "Создать беседу";
         createChatDiv.appendChild(createChatImage);
 
-        const h3 = document.createElement('h3');
-        h3.classList.add('h3');
+        const h3 = this.createElementWithClasses('h3', ['h3']);
         h3.textContent = `Беседы`;
         sidebar.appendChild(h3);
 
-        const chatList = document.createElement('div');
-        chatList.classList.add('chat-list');
+        const chatList = this.createElementWithClasses('div', ['chat-list']);
         sidebar.appendChild(chatList);
 
-        const chatContainer = document.createElement('div');
-        chatContainer.classList.add('chat-container');
+        const chatContainer = this.createElementWithClasses('div', ['chat-container']);
         container.appendChild(chatContainer);
 
-        const chatHeader = document.createElement('div');
-        chatHeader.classList.add('chat-header');
+        const chatHeader = this.createElementWithClasses('div', ['chat-header']);
         chatContainer.appendChild(chatHeader);
 
-        const h2 = document.createElement('h2');
-        h2.classList.add('h2');
+        const h2 = this.createElementWithClasses('h2', ['h2']);
         h2.textContent = 'Чат 1';
         chatHeader.appendChild(h2);
 
-        const chatMessages = document.createElement('div');
-        chatMessages.classList.add('chat-messages');
+        const chatMessages = this.createElementWithClasses('div', ['chat-messages']);
         chatContainer.appendChild(chatMessages);
 
-        const messageReceived = document.createElement('div');
-        messageReceived.classList.add('message');
-        messageReceived.classList.add('received');
-        messageReceived.textContent = `Привет! Как дела?`;
-        chatMessages.appendChild(messageReceived);
-
-        const messageSent = document.createElement('div');
-        messageSent.classList.add('message');
-        messageSent.classList.add('sent');
-        messageSent.textContent = `Привет! Все хорошо, а у тебя?`;
-        chatMessages.appendChild(messageSent);
-
-        const chatInput = document.createElement('div');
-        chatInput.classList.add('chat-input');
+        const chatInput = this.createElementWithClasses('div', ['chat-input']);
         chatContainer.appendChild(chatInput);
 
         const messageInput = document.createElement('input');
@@ -164,7 +138,7 @@
         chatInput.appendChild(sendButton);
     }
 
-    async function fillChatList() {
+    async fillChatList() {
         try {
             const response = await fetch('/api/chatlist/', {
                 method: 'GET',
@@ -175,8 +149,8 @@
 
             const data = await response.json();
             if (response.ok) {
-                createChatItems(data.rooms);
-                chatItemsSubscribe();
+                this.createChatItems(data.rooms);
+                this.chatItemsSubscribe();
             } else {
                 console.error('Ошибка:', data.message);
             }
@@ -185,20 +159,19 @@
         }
     }
 
-    function selectFirstChat() {
+    selectFirstChat() {
         const firstChatItem = document.querySelector('.chat-item');
         if (firstChatItem) {
             firstChatItem.classList.add('selected');
-            initializeChat();
+            this.initializeChat();
         }
     }
 
-    function logoutSubscribe() {
+    logoutSubscribe() {
         const logoutButton = document.querySelector('.logout');
-        if (logoutButton === null) {
-            return;
-        }
-        logoutButton.addEventListener('click', async function () {
+        if (!logoutButton) return;
+
+        logoutButton.addEventListener('click', async () => {
             try {
                 const response = await fetch('/api/logout/', {
                     method: 'GET',
@@ -207,13 +180,13 @@
                     }
                 });
 
-                const data = await response.json();
                 if (response.ok) {
-                    removeBodyElements();
-                    createLoginElements();
-                    loginFormSubscribe();
-                    signupLinkSubscribe();
+                    this.removeBodyElements();
+                    this.createLoginElements();
+                    this.loginFormSubscribe();
+                    this.signupLinkSubscribe();
                 } else {
+                    const data = await response.json();
                     console.error('Ошибка:', data.message);
                 }
             } catch (error) {
@@ -222,20 +195,16 @@
         });
     }
 
-    function createLoginElements() {
+    createLoginElements() {
         const body = document.body;
-        const container = document.createElement('div');
-        container.classList.add('container');
-        container.classList.add('login-container');
+        const container = this.createElementWithClasses('div', ['container', 'login-container']);
         body.appendChild(container);
 
-        const h2 = document.createElement('h2');
-        h2.classList.add('h2');
-        h2.textContent = `Вход`;
+        const h2 = this.createElementWithClasses('h2', ['h2']);
+        h2.textContent = 'Вход';
         container.appendChild(h2);
 
-        const loginForm = document.createElement('form');
-        loginForm.classList.add('login-form');
+        const loginForm = this.createElementWithClasses('form', ['login-form']);
         container.appendChild(loginForm);
 
         const pUsername = document.createElement('p');
@@ -243,7 +212,7 @@
 
         const idUsername = document.createElement('label');
         idUsername.htmlFor = 'id_username';
-        idUsername.textContent = `Имя пользователя:`;
+        idUsername.textContent = 'Имя пользователя:';
         pUsername.appendChild(idUsername);
 
         const username = document.createElement('input');
@@ -259,7 +228,7 @@
 
         const idPassword = document.createElement('label');
         idPassword.htmlFor = 'id_password';
-        idPassword.textContent = `Пароль:`;
+        idPassword.textContent = 'Пароль:';
         pPassword.appendChild(idPassword);
 
         const password = document.createElement('input');
@@ -276,8 +245,7 @@
         loginButton.textContent = 'Войти';
         loginForm.appendChild(loginButton);
 
-        const signupDiv = document.createElement('div');
-        signupDiv.classList.add('signup-link')
+        const signupDiv = this.createElementWithClasses('div', ['signup-link']);
         container.appendChild(signupDiv);
 
         const pSignup = document.createElement('p');
@@ -289,38 +257,32 @@
         aSignup.textContent = 'Регистрация';
         signupDiv.appendChild(aSignup);
 
-        const info = document.createElement('div');
-        info.classList.add('info');
+        const info = this.createElementWithClasses('div', ['info']);
         container.appendChild(info);
     }
 
-    function signupLinkSubscribe() {
+    signupLinkSubscribe() {
         const signupLink = document.querySelector('.signup-link a');
-        if (signupLink === null) {
-            return;
-        }
-        signupLink.addEventListener('click', async function (event) {
+        if (!signupLink) return;
+
+        signupLink.addEventListener('click', (event) => {
             event.preventDefault();
-            removeBodyElements();
-            createSignupElements();
-            signupFormSubscribe();
+            this.removeBodyElements();
+            this.createSignupElements();
+            this.signupFormSubscribe();
         });
     }
 
-    function createSignupElements() {
+    createSignupElements() {
         const body = document.body;
-        const container = document.createElement('div');
-        container.classList.add('container');
-        container.classList.add('signup-container');
+        const container = this.createElementWithClasses('div', ['container', 'signup-container']);
         body.appendChild(container);
 
-        const h2 = document.createElement('h2');
-        h2.classList.add('h2');
-        h2.textContent = `Регистрация`;
+        const h2 = this.createElementWithClasses('h2', ['h2']);
+        h2.textContent = 'Регистрация';
         container.appendChild(h2);
 
-        const signupForm = document.createElement('form');
-        signupForm.classList.add('signup-form');
+        const signupForm = this.createElementWithClasses('form', ['signup-form']);
         container.appendChild(signupForm);
 
         const pUsername = document.createElement('p');
@@ -328,7 +290,7 @@
 
         const idUsername = document.createElement('label');
         idUsername.htmlFor = 'id_username';
-        idUsername.textContent = `Имя пользователя:`;
+        idUsername.textContent = 'Имя пользователя:';
         pUsername.appendChild(idUsername);
 
         const username = document.createElement('input');
@@ -344,7 +306,7 @@
 
         const idPassword = document.createElement('label');
         idPassword.htmlFor = 'id_password';
-        idPassword.textContent = `Пароль:`;
+        idPassword.textContent = 'Пароль:';
         pPassword.appendChild(idPassword);
 
         const password = document.createElement('input');
@@ -360,7 +322,7 @@
 
         const idPasswordCheck = document.createElement('label');
         idPasswordCheck.htmlFor = 'id_password_check';
-        idPasswordCheck.textContent = `Подтвердите пароль:`;
+        idPasswordCheck.textContent = 'Подтвердите пароль:';
         pPasswordCheck.appendChild(idPasswordCheck);
 
         const passwordCheck = document.createElement('input');
@@ -377,23 +339,19 @@
         signupButton.textContent = 'Зарегистрироваться';
         signupForm.appendChild(signupButton);
 
-        const info = document.createElement('div');
-        info.classList.add('info');
+        const info = this.createElementWithClasses('div', ['info']);
         container.appendChild(info);
     }
 
-    function signupFormSubscribe() {
+    async signupFormSubscribe() {
         const form = document.querySelector('.signup-form');
-        if (form === null) {
-            return;
-        }
+        if (!form) return;
+
         const infoDiv = document.querySelector('.info');
-
-        form.addEventListener('submit', async function (event) {
+        form.addEventListener('submit', async (event) => {
             event.preventDefault();
-
             const formData = new FormData(form);
-            const csrfToken = getCookie('csrftoken');
+            const csrfToken = this.getCookie('csrftoken');
 
             try {
                 const response = await fetch('/api/signup/', {
@@ -408,29 +366,28 @@
 
                 const data = await response.json();
                 if (response.ok) {
-                    removeBodyElements();
-                    createChatElements();
-                    logoutSubscribe();
-                    newChatSubscribe();
-                    await fillChatList();
-                    selectFirstChat();
+                    this.removeBodyElements();
+                    this.createChatElements();
+                    this.logoutSubscribe();
+                    this.newChatSubscribe();
+                    await this.fillChatList();
+                    this.selectFirstChat();
                 } else {
-                    infoDiv.innerHTML = "<p style='color: red'>" + data.message + "</p>";
+                    infoDiv.innerHTML = `<p style="color: red">${data.message}</p>`;
                     console.error('Ошибка:', data.message);
                 }
             } catch (error) {
-                infoDiv.innerHTML = "<p style='color: red'>Произошла ошибка!</p>";
+                infoDiv.innerHTML = `<p style="color: red">Произошла ошибка!</p>`;
                 console.error('Ошибка:', error);
             }
         });
     }
 
-    function newChatSubscribe() {
+    newChatSubscribe() {
         const createNewChatDiv = document.querySelector('.create-chat');
-        if (createNewChatDiv === null) {
-            return;
-        }
-        createNewChatDiv.addEventListener('click', async function () {
+        if (!createNewChatDiv) return;
+
+        createNewChatDiv.addEventListener('click', async () => {
             try {
                 const response = await fetch('/api/userlist/', {
                     method: 'GET',
@@ -441,9 +398,9 @@
 
                 const data = await response.json();
                 if (response.ok) {
-                    createNewChatElements(data.users);
-                    closeCreateNewChatSubscribe();
-                    createNewChatFormSubscribe();
+                    this.createNewChatElements(data.users);
+                    this.closeCreateNewChatSubscribe();
+                    this.createNewChatFormSubscribe();
                 } else {
                     console.error('Ошибка:', data.message);
                 }
@@ -453,28 +410,23 @@
         });
     }
 
-    function createNewChatElements(users) {
+    createNewChatElements(users) {
         const body = document.body;
-        const modal = document.createElement('div');
-        modal.classList.add('modal');
+        const modal = this.createElementWithClasses('div', ['modal']);
         body.appendChild(modal);
 
-        const modalContent = document.createElement('div');
-        modalContent.classList.add('modal-content');
+        const modalContent = this.createElementWithClasses('div', ['modal-content']);
         modal.appendChild(modalContent);
 
-        const closeModal = document.createElement('span');
-        closeModal.classList.add('close');
+        const closeModal = this.createElementWithClasses('span', ['close']);
         closeModal.innerHTML = '&times;';
         modalContent.appendChild(closeModal);
 
-        const h3 = document.createElement('h3');
-        h3.classList.add('h2');
-        h3.textContent = `Создать новую беседу`;
+        const h3 = this.createElementWithClasses('h3', ['h2']);
+        h3.textContent = 'Создать новую беседу';
         modalContent.appendChild(h3);
 
-        const createChatForm = document.createElement('form');
-        createChatForm.classList.add('create-chat-form');
+        const createChatForm = this.createElementWithClasses('form', ['create-chat-form']);
         modalContent.appendChild(createChatForm);
 
         const selectUsersLabel = document.createElement('label');
@@ -482,13 +434,11 @@
         selectUsersLabel.textContent = 'Выберите пользователей:';
         createChatForm.appendChild(selectUsersLabel);
 
-        const userList = document.createElement('div');
-        userList.classList.add('user-list');
+        const userList = this.createElementWithClasses('div', ['user-list']);
         createChatForm.appendChild(userList);
 
-        for (let user of users) {
-            const userItem = document.createElement('div');
-            userItem.classList.add('user-item');
+        users.forEach(user => {
+            const userItem = this.createElementWithClasses('div', ['user-item']);
             userList.appendChild(userItem);
 
             const userItemCheckbox = document.createElement('input');
@@ -501,7 +451,7 @@
             userItemLabel.htmlFor = user.id;
             userItemLabel.textContent = user.username;
             userItem.appendChild(userItemLabel);
-        }
+        });
 
         const createChatFormButton = document.createElement('button');
         createChatFormButton.type = 'submit';
@@ -510,28 +460,24 @@
         createChatForm.appendChild(createChatFormButton);
     }
 
-    function closeCreateNewChatSubscribe() {
+    closeCreateNewChatSubscribe() {
         const closeModal = document.querySelector('.close');
-        closeModal.addEventListener('click', closeCreateNewChat);
+        closeModal.addEventListener('click', this.closeCreateNewChat);
     }
 
-    function closeCreateNewChat() {
+    closeCreateNewChat() {
         const modal = document.querySelector('.modal');
         modal.remove();
     }
 
-    function createNewChatFormSubscribe() {
+    createNewChatFormSubscribe() {
         const form = document.querySelector('.create-chat-form');
-        if (form === null) {
-            return;
-        }
-        // const infoDiv = document.querySelector('.info');
+        if (!form) return;
 
-        form.addEventListener('submit', async function (event) {
+        form.addEventListener('submit', async (event) => {
             event.preventDefault();
-
             const formData = new FormData(form);
-            const csrfToken = getCookie('csrftoken');
+            const csrfToken = this.getCookie('csrftoken');
 
             try {
                 const response = await fetch('/api/createchat/', {
@@ -546,9 +492,9 @@
 
                 const data = await response.json();
                 if (response.ok) {
-                    closeCreateNewChat();
-                    const chatItem = createNewChatItem(data.room);
-                    chatItemsSubscribe(chatItem);
+                    this.closeCreateNewChat();
+                    const chatItem = this.createNewChatItem(data.room);
+                    this.chatItemsSubscribe(chatItem);
                 } else {
                     console.error('Ошибка:', data.message);
                 }
@@ -558,51 +504,50 @@
         });
     }
 
-    function createChatItems(rooms) {
+    createChatItems(rooms) {
         const chatList = document.querySelector('.chat-list');
-        for (let room of rooms) {
-            const chatRoom = createChatItem(room);
+        rooms.forEach(room => {
+            const chatRoom = this.createChatItem(room);
             chatList.append(chatRoom);
-        }
+        });
     }
 
-    function createNewChatItem(room) {
+    createNewChatItem(room) {
         const chatList = document.querySelector('.chat-list');
-        const chatItem = createChatItem(room);
+        const chatItem = this.createChatItem(room);
         chatList.prepend(chatItem);
         return chatItem;
     }
 
-    function createChatItem(room) {
+    createChatItem(room) {
         let chatItem = document.querySelector(`.chat-item[data-chat-id="${room.id}"]`);
-        if (chatItem === null) {
-            chatItem = document.createElement('div');
+        if (!chatItem) {
+            chatItem = this.createElementWithClasses('div', ['chat-item']);
         }
-        chatItem.classList.add('chat-item');
         chatItem.dataset.chatId = room.id;
         chatItem.textContent = room.users_list;
 
         return chatItem;
     }
 
-    function chatItemsSubscribe() {
+    chatItemsSubscribe() {
         const chatItems = document.querySelectorAll('.chat-item');
-        chatItems.forEach(chatItemSubscribe);
+        chatItems.forEach(chatItem => this.chatItemSubscribe(chatItem));
     }
 
-    function chatItemSubscribe(chatItem) {
-        chatItem.addEventListener('click', async function () {
+    chatItemSubscribe(chatItem) {
+        chatItem.addEventListener('click', async () => {
             const chatItems = document.querySelectorAll('.chat-item');
             chatItems.forEach(i => i.classList.remove('selected'));
-            this.classList.add('selected');
-            initializeChat();
+            chatItem.classList.add('selected');
+            this.initializeChat();
 
-            const chatId = this.dataset.chatId;
-            await loadChatMessages(chatId);
+            const chatId = chatItem.dataset.chatId;
+            await this.loadChatMessages(chatId);
         });
     }
 
-    async function loadChatMessages(chatId) {
+    async loadChatMessages(chatId) {
         try {
             const response = await fetch(`/api/chat/${chatId}/messages/`, {
                 method: 'GET',
@@ -613,52 +558,46 @@
 
             const data = await response.json();
             if (response.ok) {
-                updateChatMessages(data.messages, data.current_user);  // Передаем сообщения и текущего пользователя
+                this.updateChatMessages(data.messages, data.current_user);
             } else {
-                console.error('Ошибка загрузки сообщений:', data);
+                console.error('Ошибка:', data.message);
             }
         } catch (error) {
             console.error('Ошибка:', error);
         }
     }
 
-    function updateChatMessages(messages, currentUser) {
+    updateChatMessages(messages, currentUser) {
         const chatMessagesContainer = document.querySelector('.chat-messages');
         chatMessagesContainer.innerHTML = '';
 
         messages.forEach(message => {
-            const messageDiv = document.createElement('div');
-            messageDiv.classList.add('message');
+            const messageDiv = this.createElementWithClasses('div', ['message']);
             messageDiv.classList.add(message.sender === currentUser ? 'sent' : 'received');
-            messageDiv.textContent = `${message.text}`;
+            messageDiv.textContent = message.text;
             chatMessagesContainer.appendChild(messageDiv);
         });
 
         chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
     }
 
-    function initializeChat() {
+    initializeChat() {
         const selectedChatItem = document.querySelector('.chat-item.selected');
+        if (!selectedChatItem) return;
 
-        if (selectedChatItem === null) {
-            return;
-        }
-
-        if (socket) {
-            socket.close();
+        if (this.socket) {
+            this.socket.close();
         }
 
         const chatId = selectedChatItem.dataset.chatId;
-        socket = new WebSocket(`ws://${window.location.host}/ws/chat/${chatId}/`, [], {
-            headers: {
-                'Cookie': document.cookie
-            }
+        this.socket = new WebSocket(`ws://${window.location.host}/ws/chat/${chatId}/`, [], {
+            headers: {'Cookie': document.cookie}
         });
 
-        socket.onmessage = (event) => {
+        this.socket.onmessage = (event) => {
             const data = JSON.parse(event.data);
             if (data.type === 'chat_message') {
-                addMessageToChat(data.message, 'received');
+                this.addMessageToChat(data.message, 'received');
             }
         };
 
@@ -668,30 +607,34 @@
         sendButton.addEventListener('click', () => {
             const message = messageInput.value;
             if (message) {
-                sendMessage(socket, message);
+                this.sendMessage(message);
                 messageInput.value = '';
             }
         });
 
-        messageInput.addEventListener('input', function () {
+        messageInput.addEventListener('input', () => {
             sendButton.disabled = messageInput.value.trim() === '';
         });
     }
 
-    function sendMessage(socket, message) {
-        socket.send(JSON.stringify({
-            type: 'message',
-            message: message,
-        }));
-        addMessageToChat(message, 'sent');
+    sendMessage(message) {
+        this.socket.send(JSON.stringify({type: 'message', message}));
+        this.addMessageToChat(message, 'sent');
     }
 
-    function addMessageToChat(message, messageType) {
+    addMessageToChat(message, messageType) {
         const chatMessages = document.querySelector('.chat-messages');
-        const messageDiv = document.createElement('div');
-        messageDiv.classList.add('message', messageType);
+        const messageDiv = this.createElementWithClasses('div', ['message', messageType]);
         messageDiv.textContent = message;
         chatMessages.appendChild(messageDiv);
         chatMessages.scrollTop = chatMessages.scrollHeight;
     }
-}());
+
+    createElementWithClasses(tag, classes) {
+        const element = document.createElement(tag);
+        classes.forEach(className => element.classList.add(className));
+        return element;
+    }
+}
+
+new ChatApp();
