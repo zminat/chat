@@ -12,7 +12,15 @@ class ChatApp {
             this.newChatSubscribe();
             this.chatItemsSubscribe();
             this.selectFirstChat();
+            this.scrollToBottom();
         });
+    }
+
+    scrollToBottom() {
+        const chatMessagesContainer = document.querySelector('.chat-messages');
+        if (chatMessagesContainer) {
+            chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
+        }
     }
 
     getCookie(name) {
@@ -578,12 +586,15 @@ class ChatApp {
             chatMessagesContainer.appendChild(messageDiv);
         });
 
-        chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
+        this.scrollToBottom();
     }
 
     initializeChat() {
         const selectedChatItem = document.querySelector('.chat-item.selected');
         if (!selectedChatItem) return;
+
+        const roomName = selectedChatItem.textContent.trim();
+        this.updateChatHeader(roomName);
 
         if (this.socket) {
             this.socket.close();
@@ -612,9 +623,26 @@ class ChatApp {
             }
         });
 
+        messageInput.addEventListener('keydown', (event) => {
+            if (event.key !== 'Enter') return;
+            event.preventDefault();
+            const message = messageInput.value;
+            if (message) {
+                this.sendMessage(message);
+                messageInput.value = '';
+            }
+        });
+
         messageInput.addEventListener('input', () => {
             sendButton.disabled = messageInput.value.trim() === '';
         });
+    }
+
+    updateChatHeader(roomName) {
+        const chatHeader = document.querySelector('.chat-header h2');
+        if (chatHeader) {
+            chatHeader.textContent = roomName;
+        }
     }
 
     sendMessage(message) {
