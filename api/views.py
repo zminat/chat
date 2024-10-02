@@ -35,8 +35,8 @@ class LoginView(APIView):
         user = authenticate(request, username=username, password=password)
         if user is not None:
             login(request, user)
-            return Response({'success': True, 'message': 'Login successful'}, status=status.HTTP_200_OK)
-        return Response({'success': False, 'message': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response({'message': 'Login successful'}, status=status.HTTP_200_OK)
+        return Response({'message': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
 
 
 class LogoutView(APIView):
@@ -44,7 +44,7 @@ class LogoutView(APIView):
 
     def get(self, request):
         logout(request)
-        return Response({'success': True, 'message': 'Logout successful'}, status=status.HTTP_200_OK)
+        return Response({'message': 'Logout successful'}, status=status.HTTP_200_OK)
 
 
 class SignupView(APIView):
@@ -53,10 +53,10 @@ class SignupView(APIView):
         password = request.data.get('password')
         password_check = request.data.get('password_check')
         if password != password_check:
-            return Response({'success': False, 'message': "Passwords don't match"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'message': "Passwords don't match"}, status=status.HTTP_400_BAD_REQUEST)
         user = User.objects.create_user(username=username, password=password)
         login(request, user)
-        return Response({'success': True, 'message': 'Login successful'}, status=status.HTTP_200_OK)
+        return Response({'message': 'Login successful'}, status=status.HTTP_200_OK)
 
 
 class UserListView(APIView):
@@ -65,7 +65,7 @@ class UserListView(APIView):
     def get(self, request):
         users = User.objects.exclude(id=request.user.id)
         serializer = UserSerializer(users, many=True)
-        return Response({'success': True, 'message': 'Room created', 'users': serializer.data}, status=status.HTTP_200_OK)
+        return Response({'message': 'Room created', 'users': serializer.data}, status=status.HTTP_200_OK)
 
 
 class CreateChatView(APIView):
@@ -82,13 +82,13 @@ class CreateChatView(APIView):
                 room_users = set(room.users.all())
                 if room_users == set(selected_users):
                     serializer = ChatRoomSerializer(room)
-                    return Response({'success': True, 'message': 'Room created', 'room': serializer.data}, status=status.HTTP_200_OK)
+                    return Response({'message': 'Room created', 'room': serializer.data}, status=status.HTTP_200_OK)
 
             chat_room = ChatRoom.objects.create()
             chat_room.users.set(selected_users)
             serializer = ChatRoomSerializer(chat_room)
-            return Response({'success': True, 'message': 'Room created', 'room': serializer.data}, status=status.HTTP_200_OK)
-        return Response({'success': False, 'message': "Can't create room"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'message': 'Room created', 'room': serializer.data}, status=status.HTTP_200_OK)
+        return Response({'message': "Can't create room"}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class ChatListView(APIView):
@@ -98,7 +98,7 @@ class ChatListView(APIView):
         user = request.user
         chat_rooms = ChatRoom.objects.filter(users=user)
         serializer = ChatRoomSerializer(chat_rooms, many=True)
-        return Response({'success': True, 'message': 'Room created', 'rooms': serializer.data}, status=status.HTTP_200_OK)
+        return Response({'message': 'Room created', 'rooms': serializer.data}, status=status.HTTP_200_OK)
 
 
 class MessageListView(ListAPIView):

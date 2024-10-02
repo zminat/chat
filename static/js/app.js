@@ -1,3 +1,5 @@
+let socket = null;
+
 document.addEventListener('DOMContentLoaded', function () {
     loginFormSubscribe();
     signupLinkSubscribe();
@@ -48,7 +50,7 @@ function loginFormSubscribe() {
             });
 
             const data = await response.json();
-            if (data.success) {
+            if (response.ok) {
                 removeBodyElements();
                 createChatElements();
                 logoutSubscribe();
@@ -56,6 +58,7 @@ function loginFormSubscribe() {
                 selectFirstChat();
             } else {
                 infoDiv.innerHTML = "<p style='color: red'>" + data.message + "</p>";
+                console.error('Ошибка:', data.message);
             }
         } catch (error) {
             infoDiv.innerHTML = "<p style='color: red'>Произошла ошибка!</p>";
@@ -160,7 +163,7 @@ function createChatElements() {
     chatInput.appendChild(sendButton);
 }
 
-async function fillChatList(){
+async function fillChatList() {
     try {
         const response = await fetch('/api/chatlist/', {
             method: 'GET',
@@ -170,9 +173,11 @@ async function fillChatList(){
         });
 
         const data = await response.json();
-        if (data.success) {
+        if (response.ok) {
             createChatItems(data.rooms);
             chatItemsSubscribe();
+        } else {
+            console.error('Ошибка:', data.message);
         }
     } catch (error) {
         console.error('Ошибка:', error);
@@ -202,11 +207,13 @@ function logoutSubscribe() {
             });
 
             const data = await response.json();
-            if (data.success) {
+            if (response.ok) {
                 removeBodyElements();
                 createLoginElements();
                 loginFormSubscribe();
                 signupLinkSubscribe();
+            } else {
+                console.error('Ошибка:', data.message);
             }
         } catch (error) {
             console.error('Ошибка:', error);
@@ -399,7 +406,7 @@ function signupFormSubscribe() {
             });
 
             const data = await response.json();
-            if (data.success) {
+            if (response.ok) {
                 removeBodyElements();
                 createChatElements();
                 logoutSubscribe();
@@ -408,6 +415,7 @@ function signupFormSubscribe() {
                 selectFirstChat();
             } else {
                 infoDiv.innerHTML = "<p style='color: red'>" + data.message + "</p>";
+                console.error('Ошибка:', data.message);
             }
         } catch (error) {
             infoDiv.innerHTML = "<p style='color: red'>Произошла ошибка!</p>";
@@ -431,10 +439,12 @@ function newChatSubscribe() {
             });
 
             const data = await response.json();
-            if (data.success) {
+            if (response.ok) {
                 createNewChatElements(data.users);
                 closeCreateNewChatSubscribe();
                 createNewChatFormSubscribe();
+            } else {
+                console.error('Ошибка:', data.message);
             }
         } catch (error) {
             console.error('Ошибка:', error);
@@ -467,7 +477,7 @@ function createNewChatElements(users) {
     modalContent.appendChild(createChatForm);
 
     const selectUsersLabel = document.createElement('label');
-    selectUsersLabel.htmlFor =  'users';
+    selectUsersLabel.htmlFor = 'users';
     selectUsersLabel.textContent = 'Выберите пользователей:';
     createChatForm.appendChild(selectUsersLabel);
 
@@ -475,7 +485,7 @@ function createNewChatElements(users) {
     userList.classList.add('user-list');
     createChatForm.appendChild(userList);
 
-    for (let user of users){
+    for (let user of users) {
         const userItem = document.createElement('div');
         userItem.classList.add('user-item');
         userList.appendChild(userItem);
@@ -534,11 +544,12 @@ function createNewChatFormSubscribe() {
             });
 
             const data = await response.json();
-            if (data.success) {
+            if (response.ok) {
                 closeCreateNewChat();
                 const chatItem = createNewChatItem(data.room);
                 chatItemsSubscribe(chatItem);
-                console.log('Success');
+            } else {
+                console.error('Ошибка:', data.message);
             }
         } catch (error) {
             console.error('Ошибка:', error);
@@ -632,26 +643,22 @@ function initializeChat() {
         return;
     }
 
+    if (socket) {
+        socket.close();
+    }
+
     const chatId = selectedChatItem.dataset.chatId;
-    const socket = new WebSocket(`ws://${window.location.host}/ws/chat/${chatId}/`, [], {
+    socket = new WebSocket(`ws://${window.location.host}/ws/chat/${chatId}/`, [], {
         headers: {
             'Cookie': document.cookie
         }
     });
-
-    socket.onopen = () => {
-        console.log('Соединение с WebSocket установлено');
-    };
 
     socket.onmessage = (event) => {
         const data = JSON.parse(event.data);
         if (data.type === 'chat_message') {
             addMessageToChat(data.message, 'received');
         }
-    };
-
-    socket.onclose = () => {
-        console.log('Соединение с WebSocket закрыто');
     };
 
     const sendButton = document.querySelector('.chat-input button');
