@@ -3,9 +3,8 @@ document.addEventListener('DOMContentLoaded', function () {
     signupLinkSubscribe();
     logoutSubscribe();
     newChatSubscribe();
-    inputSubscribe();
     chatItemsSubscribe();
-    initializeChat();
+    selectFirstChat();
 });
 
 function getCookie(name) {
@@ -52,9 +51,9 @@ function loginFormSubscribe() {
             if (data.success) {
                 removeBodyElements();
                 createChatElements();
-                inputSubscribe();
                 logoutSubscribe();
                 await fillChatList();
+                selectFirstChat();
             } else {
                 infoDiv.innerHTML = "<p style='color: red'>" + data.message + "</p>";
             }
@@ -180,15 +179,12 @@ async function fillChatList(){
     }
 }
 
-function inputSubscribe() {
-    const messageInput = document.querySelector('.chat-input input');
-    if (messageInput === null) {
-        return;
+function selectFirstChat() {
+    const firstChatItem = document.querySelector('.chat-item');
+    if (firstChatItem) {
+        firstChatItem.classList.add('selected');
+        initializeChat();
     }
-    messageInput.addEventListener('input', async function () {
-        const sendButton = document.querySelector('.chat-input button');
-        sendButton.disabled = messageInput.value === '';
-    });
 }
 
 function logoutSubscribe() {
@@ -406,10 +402,10 @@ function signupFormSubscribe() {
             if (data.success) {
                 removeBodyElements();
                 createChatElements();
-                inputSubscribe();
                 logoutSubscribe();
                 newChatSubscribe();
                 await fillChatList();
+                selectFirstChat();
             } else {
                 infoDiv.innerHTML = "<p style='color: red'>" + data.message + "</p>";
             }
@@ -583,12 +579,50 @@ function chatItemsSubscribe() {
 }
 
 function chatItemSubscribe(chatItem) {
-    chatItem.addEventListener('click', function () {
+    chatItem.addEventListener('click', async function () {
         const chatItems = document.querySelectorAll('.chat-item');
         chatItems.forEach(i => i.classList.remove('selected'));
         this.classList.add('selected');
         initializeChat();
+
+        const chatId = this.dataset.chatId;
+        await loadChatMessages(chatId);
     });
+}
+
+async function loadChatMessages(chatId) {
+    try {
+        const response = await fetch(`/api/chat/${chatId}/messages/`, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json'
+            }
+        });
+
+        const data = await response.json();
+        if (response.ok) {
+            updateChatMessages(data.messages, data.current_user);  // Передаем сообщения и текущего пользователя
+        } else {
+            console.error('Ошибка загрузки сообщений:', data);
+        }
+    } catch (error) {
+        console.error('Ошибка:', error);
+    }
+}
+
+function updateChatMessages(messages, currentUser) {
+    const chatMessagesContainer = document.querySelector('.chat-messages');
+    chatMessagesContainer.innerHTML = '';
+
+    messages.forEach(message => {
+        const messageDiv = document.createElement('div');
+        messageDiv.classList.add('message');
+        messageDiv.classList.add(message.sender === currentUser ? 'sent' : 'received');
+        messageDiv.textContent = `${message.text}`;
+        chatMessagesContainer.appendChild(messageDiv);
+    });
+
+    chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
 }
 
 function initializeChat() {

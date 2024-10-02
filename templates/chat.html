@@ -24,7 +24,7 @@
         <h3>Беседы</h3>
         <div class="chat-list">
             {% for chat_room in chat_rooms %}
-            <div class="chat-item" data-chat-id="{{ chat_room.id }}">{{ chat_room }}</div>
+            <div class="chat-item {% if forloop.first %}selected{% endif %}" data-chat-id="{{ chat_room.id }}">{{ chat_room }}</div>
             {% empty %}
             <p>У вас пока нет чатов.</p>
             {% endfor %}
@@ -32,11 +32,12 @@
     </div>
     <div class="chat-container">
         <div class="chat-header">
-            <h2>Чат 1</h2>
+            <h2>{{ selected_chat_room }}</h2>
         </div>
         <div class="chat-messages">
-            <div class="message received">Привет! Как дела?</div>
-            <div class="message sent">Привет! Все хорошо, а у тебя?</div>
+            {% for message in messages %}
+            <div class="message {% if message.sender == user %}sent{% else %}received{% endif %}">{{ message.text }}</div>
+            {% endfor %}
         </div>
         <div class="chat-input">
             <input type="text" placeholder="Введите сообщение...">

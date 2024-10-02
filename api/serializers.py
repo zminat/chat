@@ -1,6 +1,6 @@
 from django.contrib.auth.models import User
 from rest_framework import serializers
-from api.models import ChatRoom
+from api.models import ChatRoom, Message
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -18,3 +18,11 @@ class ChatRoomSerializer(serializers.ModelSerializer):
 
     def get_users_list(self, obj):
         return str(obj)
+
+
+class MessageSerializer(serializers.ModelSerializer):
+    sender = serializers.StringRelatedField()
+
+    class Meta:
+        model = Message
+        fields = ['sender', 'text', 'timestamp']

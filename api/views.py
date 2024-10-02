@@ -2,11 +2,12 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
 from django.shortcuts import render
 from rest_framework import status
+from rest_framework.generics import ListAPIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from api.models import ChatRoom
-from api.serializers import UserSerializer, ChatRoomSerializer
+from api.models import ChatRoom, Message
+from api.serializers import UserSerializer, ChatRoomSerializer, MessageSerializer
 
 
 def homepage(request):
@@ -14,7 +15,17 @@ def homepage(request):
         return render(request, 'index.html')
     user = request.user
     chat_rooms = ChatRoom.objects.filter(users=user)
-    return render(request, 'chat.html', {'chat_rooms': chat_rooms})
+
+    selected_chat_room = chat_rooms.first()
+    messages = Message.objects.filter(chat_room=selected_chat_room) if selected_chat_room else []
+
+    context = {
+        'user': user,
+        'chat_rooms': chat_rooms,
+        'selected_chat_room': selected_chat_room,
+        'messages': messages,
+    }
+    return render(request, 'chat.html', context)
 
 
 class LoginView(APIView):
@@ -79,6 +90,7 @@ class CreateChatView(APIView):
             return Response({'success': True, 'message': 'Room created', 'room': serializer.data}, status=status.HTTP_200_OK)
         return Response({'success': False, 'message': "Can't create room"}, status=status.HTTP_400_BAD_REQUEST)
 
+
 class ChatListView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -87,3 +99,21 @@ class ChatListView(APIView):
         chat_rooms = ChatRoom.objects.filter(users=user)
         serializer = ChatRoomSerializer(chat_rooms, many=True)
         return Response({'success': True, 'message': 'Room created', 'rooms': serializer.data}, status=status.HTTP_200_OK)
+
+
+class MessageListView(ListAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = MessageSerializer
+
+    def get_queryset(self):
+        chat_room_id = self.kwargs.get('chat_room_id')
+        return Message.objects.filter(chat_room_id=chat_room_id).order_by('timestamp')
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        serializer = self.get_serializer(queryset, many=True)
+        current_user = request.user.username
+        return Response({
+            'current_user': current_user,
+            'messages': serializer.data
+        })
