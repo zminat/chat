@@ -11,7 +11,7 @@ class ChatApp {
             this.logoutSubscribe();
             this.newChatSubscribe();
             this.chatItemsSubscribe();
-            this.selectFirstChat();
+            await this.selectFirstChat();
             this.scrollToBottom();
         });
     }
@@ -65,7 +65,7 @@ class ChatApp {
                     this.createChatElements();
                     this.logoutSubscribe();
                     await this.fillChatList();
-                    this.selectFirstChat();
+                    await this.selectFirstChat();
                 } else {
                     infoDiv.innerHTML = `<p style="color: red">${data.message}</p>`;
                     console.error('Ошибка:', data.message);
@@ -167,11 +167,16 @@ class ChatApp {
         }
     }
 
-    selectFirstChat() {
+    async selectFirstChat() {
         const firstChatItem = document.querySelector('.chat-item');
         if (firstChatItem) {
+            const chatItems = document.querySelectorAll('.chat-item');
+            chatItems.forEach(i => i.classList.remove('selected'));
             firstChatItem.classList.add('selected');
             this.initializeChat();
+
+            const chatId = firstChatItem.dataset.chatId;
+            await this.loadChatMessages(chatId);
         }
     }
 
@@ -379,7 +384,7 @@ class ChatApp {
                     this.logoutSubscribe();
                     this.newChatSubscribe();
                     await this.fillChatList();
-                    this.selectFirstChat();
+                    await this.selectFirstChat();
                 } else {
                     infoDiv.innerHTML = `<p style="color: red">${data.message}</p>`;
                     console.error('Ошибка:', data.message);
@@ -503,6 +508,7 @@ class ChatApp {
                     this.closeCreateNewChat();
                     const chatItem = this.createNewChatItem(data.room);
                     this.chatItemsSubscribe(chatItem);
+                    await this.selectFirstChat();
                 } else {
                     console.error('Ошибка:', data.message);
                 }
