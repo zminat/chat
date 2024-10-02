@@ -1,6 +1,6 @@
 from django.urls import path
 
-from api.views import LoginView, LogoutView, SignupView, UserListView, CreateChatView
+from api.views import LoginView, LogoutView, SignupView, UserListView, CreateChatView, ChatListView
 
 urlpatterns = [
     path('login/', LoginView.as_view(), name='login'),
@@ -8,4 +8,5 @@ urlpatterns = [
     path('signup/', SignupView.as_view(), name='signup'),
     path('userlist/', UserListView.as_view(), name='userlist'),
     path('createchat/', CreateChatView.as_view(), name='createchat'),
+    path('chatlist/', ChatListView.as_view(), name='chatlist'),
 ]

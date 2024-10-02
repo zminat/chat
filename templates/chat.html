@@ -11,7 +11,6 @@
 <body>
 
 <div class="container messenger-container">
-    <!-- Боковая панель с беседами -->
     <div class="sidebar">
         <div class="avatar">
             <img src="{% static 'images/avatar.jpg' %}" alt="Аватар" />
@@ -19,26 +18,23 @@
                 <button class="dropdown-item logout">Выйти</button>
             </div>
         </div>
-        <!-- Иконка создания беседы -->
         <div class="create-chat">
             <img src="{% static 'images/create-chat-icon.png' %}" alt="Создать беседу">
         </div>
         <h3>Беседы</h3>
         <div class="chat-list">
-            <div class="chat-item">Чат 1</div>
-            <div class="chat-item">Чат 2</div>
-            <div class="chat-item">Чат 3</div>
-            <div class="chat-item">Чат 4</div>
+            {% for chat_room in chat_rooms %}
+            <div class="chat-item" data-chat-id="{{ chat_room.id }}">{{ chat_room }}</div>
+            {% empty %}
+            <p>У вас пока нет чатов.</p>
+            {% endfor %}
         </div>
     </div>
-
-    <!-- Основное окно чата -->
     <div class="chat-container">
         <div class="chat-header">
             <h2>Чат 1</h2>
         </div>
         <div class="chat-messages">
-            <!-- Пример сообщений -->
             <div class="message received">Привет! Как дела?</div>
             <div class="message sent">Привет! Все хорошо, а у тебя?</div>
         </div>

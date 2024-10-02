@@ -4,6 +4,7 @@ document.addEventListener('DOMContentLoaded', function () {
     logoutSubscribe();
     newChatSubscribe();
     inputSubscribe();
+    chatItemsSubscribe();
 });
 
 function getCookie(name) {
@@ -52,6 +53,7 @@ function loginFormSubscribe() {
                 createChatElements();
                 inputSubscribe();
                 logoutSubscribe();
+                await fillChatList();
             } else {
                 infoDiv.innerHTML = "<p style='color: red'>" + data.message + "</p>";
             }
@@ -114,14 +116,6 @@ function createChatElements() {
     chatList.classList.add('chat-list');
     sidebar.appendChild(chatList);
 
-    const numberOfChats = 4;
-    for (let i = 1; i <= numberOfChats; i++) {
-        const chatItem = document.createElement('div');
-        chatItem.classList.add('chat-item');
-        chatItem.textContent = `Чат ${i}`;
-        chatList.appendChild(chatItem);
-    }
-
     const chatContainer = document.createElement('div');
     chatContainer.classList.add('chat-container');
     container.appendChild(chatContainer);
@@ -132,7 +126,7 @@ function createChatElements() {
 
     const h2 = document.createElement('h2');
     h2.classList.add('h2');
-    h2.textContent = `Чат 1`;
+    h2.textContent = 'Чат 1';
     chatHeader.appendChild(h2);
 
     const chatMessages = document.createElement('div');
@@ -164,6 +158,25 @@ function createChatElements() {
     sendButton.textContent = 'Отправить';
     sendButton.disabled = true;
     chatInput.appendChild(sendButton);
+}
+
+async function fillChatList(){
+    try {
+        const response = await fetch('/api/chatlist/', {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json'
+            }
+        });
+
+        const data = await response.json();
+        if (data.success) {
+            createChatItems(data.rooms);
+            chatItemsSubscribe();
+        }
+    } catch (error) {
+        console.error('Ошибка:', error);
+    }
 }
 
 function inputSubscribe() {
@@ -395,6 +408,7 @@ function signupFormSubscribe() {
                 inputSubscribe();
                 logoutSubscribe();
                 newChatSubscribe();
+                await fillChatList();
             } else {
                 infoDiv.innerHTML = "<p style='color: red'>" + data.message + "</p>";
             }
@@ -419,9 +433,9 @@ function newChatSubscribe() {
                 }
             });
 
-            const users = await response.json();
-            if (users.length !== 0) {
-                createNewChatElements(users);
+            const data = await response.json();
+            if (data.success) {
+                createNewChatElements(data.users);
                 closeCreateNewChatSubscribe();
                 createNewChatFormSubscribe();
             }
@@ -490,10 +504,12 @@ function createNewChatElements(users) {
 
 function closeCreateNewChatSubscribe() {
     const closeModal = document.querySelector('.close');
-    closeModal.addEventListener('click', function () {
-        const modal = document.querySelector('.modal');
-        modal.remove();
-    });
+    closeModal.addEventListener('click', closeCreateNewChat);
+}
+
+function closeCreateNewChat() {
+    const modal = document.querySelector('.modal');
+    modal.remove();
 }
 
 function createNewChatFormSubscribe() {
@@ -522,10 +538,53 @@ function createNewChatFormSubscribe() {
 
             const data = await response.json();
             if (data.success) {
+                closeCreateNewChat();
+                const chatItem = createNewChatItem(data.room);
+                chatItemsSubscribe(chatItem);
                 console.log('Success');
             }
         } catch (error) {
             console.error('Ошибка:', error);
         }
+    });
+}
+
+function createChatItems(rooms) {
+    const chatList = document.querySelector('.chat-list');
+    for (let room of rooms) {
+        const chatRoom = createChatItem(room);
+        chatList.append(chatRoom);
+    }
+}
+
+function createNewChatItem(room) {
+    const chatList = document.querySelector('.chat-list');
+    const chatItem = createChatItem(room);
+    chatList.prepend(chatItem);
+    return chatItem;
+}
+
+function createChatItem(room) {
+    let chatItem = document.querySelector(`.chat-item[data-chat-id="${room.id}"]`);
+    if (chatItem === null) {
+        chatItem = document.createElement('div');
+    }
+    chatItem.classList.add('chat-item');
+    chatItem.dataset.chatId = room.id;
+    chatItem.textContent = room.users_list;
+
+    return chatItem;
+}
+
+function chatItemsSubscribe() {
+    const chatItems = document.querySelectorAll('.chat-item');
+    chatItems.forEach(chatItemSubscribe);
+}
+
+function chatItemSubscribe(chatItem) {
+    chatItem.addEventListener('click', function () {
+        const chatItems = document.querySelectorAll('.chat-item');
+        chatItems.forEach(i => i.classList.remove('selected'));
+        this.classList.add('selected');
     });
 }

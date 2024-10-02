@@ -130,6 +130,11 @@ h2 {
     background-color: #6c757d;
 }
 
+.chat-item.selected {
+    background-color: #6c757d;
+    font-weight: bold;
+}
+
 .chat-container {
     flex: 1;
     display: flex;
@@ -212,11 +217,11 @@ h2 {
 }
 
 .dropdown-menu {
-    display: none; /* Скрываем меню по умолчанию */
-    background-color: #343a40; /* Цвет фона меню */
+    display: none;
+    background-color: #343a40;
     border-radius: 5px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-    z-index: 1000; /* Чтобы меню было выше других элементов */
+    z-index: 1000;
 }
 
 .dropdown-item {
@@ -228,22 +233,21 @@ h2 {
     text-align: left;
     cursor: pointer;
     font-size: 16px;
-    display: block; /* Чтобы кнопка занимала всю ширину */
+    display: block;
     transition: background-color 0.3s ease;
 }
 
 .dropdown-item:hover {
-    background-color: #495057; /* Цвет при наведении */
+    background-color: #495057;
 }
 
 .dropdown-item:focus {
-    outline: none; /* Убираем стандартное выделение */
+    outline: none;
 }
 
-/* Показываем меню при наведении на аватар или меню */
 .avatar:hover .dropdown-menu,
 .dropdown-menu:hover {
-    display: block; /* Показываем меню при наведении на аватар или меню */
+    display: block;
 }
 
 .create-chat {
@@ -265,8 +269,7 @@ h2 {
 }
 
 .modal {
-    display: block; /* Скрыто по умолчанию */
-    /*display: none; !* Скрыто по умолчанию *!*/
+    display: block;
     position: fixed;
     z-index: 1000;
     left: 0;
@@ -331,7 +334,6 @@ h2 {
     background-color: #0056b3;
 }
 
-/* Кнопка закрытия модального окна */
 .close {
     color: #aaa;
     float: right;

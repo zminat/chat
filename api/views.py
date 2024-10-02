@@ -6,13 +6,15 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from api.models import ChatRoom
-from api.serializers import UserSerializer
+from api.serializers import UserSerializer, ChatRoomSerializer
 
 
 def homepage(request):
-    if request.user is not None and not request.user.is_anonymous:
-        return render(request, 'chat.html')
-    return render(request, 'index.html')
+    if request.user is None or request.user.is_anonymous:
+        return render(request, 'index.html')
+    user = request.user
+    chat_rooms = ChatRoom.objects.filter(users=user)
+    return render(request, 'chat.html', {'chat_rooms': chat_rooms})
 
 
 class LoginView(APIView):
@@ -52,7 +54,7 @@ class UserListView(APIView):
     def get(self, request):
         users = User.objects.exclude(id=request.user.id)
         serializer = UserSerializer(users, many=True)
-        return Response(serializer.data)
+        return Response({'success': True, 'message': 'Room created', 'users': serializer.data}, status=status.HTTP_200_OK)
 
 
 class CreateChatView(APIView):
@@ -61,9 +63,27 @@ class CreateChatView(APIView):
     def post(self, request):
         users = request.data.getlist('users')
         users.append(request.user.id)
+
         selected_users = User.objects.filter(id__in=users)
         if selected_users.exists():
+            possible_rooms = ChatRoom.objects.filter(users__in=selected_users).distinct()
+            for room in possible_rooms:
+                room_users = set(room.users.all())
+                if room_users == set(selected_users):
+                    serializer = ChatRoomSerializer(room)
+                    return Response({'success': True, 'message': 'Room created', 'room': serializer.data}, status=status.HTTP_200_OK)
+
             chat_room = ChatRoom.objects.create()
             chat_room.users.set(selected_users)
-            return Response({'success': True, 'message': 'Room created'}, status=status.HTTP_200_OK)
+            serializer = ChatRoomSerializer(chat_room)
+            return Response({'success': True, 'message': 'Room created', 'room': serializer.data}, status=status.HTTP_200_OK)
         return Response({'success': False, 'message': "Can't create room"}, status=status.HTTP_400_BAD_REQUEST)
+
+class ChatListView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        chat_rooms = ChatRoom.objects.filter(users=user)
+        serializer = ChatRoomSerializer(chat_rooms, many=True)
+        return Response({'success': True, 'message': 'Room created', 'rooms': serializer.data}, status=status.HTTP_200_OK)
