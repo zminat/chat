@@ -215,7 +215,8 @@ h2 {
 }
 
 .message.received {
-    background-color: #a29bfe;
+    color: white;
+    background-color: #6c757d;
 }
 
 .tooltip {
