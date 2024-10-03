@@ -12,8 +12,6 @@ class RoomConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         if self.scope['user'].is_authenticated:
             self.user_id = self.scope['user'].id
-        else:
-            self.user_id = None
 
         if self.user_id:
             await self.channel_layer.group_add(
@@ -31,22 +29,16 @@ class RoomConsumer(AsyncWebsocketConsumer):
             )
 
     async def new_chat(self, event):
-        creator_id = event['creator_id']
-
-        if creator_id != self.scope["user"].id:
-            await self.send(text_data=json.dumps({
-                'type': 'new_chat',
-                'room': event['room']
-            }))
+        await self.send(text_data=json.dumps({
+            'type': 'new_chat',
+            'room': event['room']
+        }))
 
     async def delete_chat(self, event):
-        creator_id = event['creator_id']
-
-        if creator_id != self.scope["user"].id:
-            await self.send(text_data=json.dumps({
-                'type': 'delete_chat',
-                'room_id': event['room_id']
-            }))
+        await self.send(text_data=json.dumps({
+            'type': 'delete_chat',
+            'room_id': event['room_id']
+        }))
 
 
 class ChatMessageConsumer(AsyncWebsocketConsumer):

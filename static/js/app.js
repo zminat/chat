@@ -29,7 +29,7 @@ class ChatApp {
             if (data.type === 'new_chat') {
                 this.addChatRoomToList(data.room);
             } else if (data.type === 'delete_chat') {
-                await this.removeChatFromList(data.room_id, false);
+                await this.removeChatFromList(data.room_id);
             }
         };
     }
@@ -954,7 +954,7 @@ class ChatApp {
 
             const data = await response.json();
             if (response.ok) {
-                await this.removeChatFromList(chatId, true);
+                await this.removeChatFromList(chatId);
             } else {
                 console.error('Ошибка удаления чата:', data.message);
             }
@@ -963,17 +963,29 @@ class ChatApp {
         }
     }
 
-    async removeChatFromList(chatId, selectFirst) {
+    async removeChatFromList(chatId) {
         const chatItem = document.querySelector(`.chat-item[data-chat-id="${chatId}"]`);
+
         if (chatItem) {
+            const isSelected = chatItem.classList.contains('selected');
             chatItem.remove();
 
-            if (!selectFirst) return;
-
-            const firstChatItem = document.querySelector('.chat-item');
-            if (firstChatItem) {
-                await this.selectFirstChat();
+            if (isSelected) {
+                const firstChatItem = document.querySelector('.chat-item');
+                if (firstChatItem) {
+                    await this.selectFirstChat();
+                } else {
+                    this.clearChat();
+                }
             }
+        }
+    }
+
+    clearChat() {
+        this.updateChatHeader('');
+        const chatMessagesContainer = document.querySelector('.chat-messages');
+        if (chatMessagesContainer) {
+            chatMessagesContainer.innerHTML = '';
         }
     }
 

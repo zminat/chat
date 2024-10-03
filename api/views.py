@@ -119,17 +119,17 @@ class CreateChatView(APIView):
             chat_room.users.set(selected_users)
             serializer = ChatRoomSerializer(chat_room)
 
-            for user in selected_users:
+            other_users = selected_users.exclude(id=user_id)
+            for user in other_users:
                 async_to_sync(channel_layer.group_send)(
                     f'user_{user.id}',
                     {
                         'type': 'new_chat',
-                        'room': serializer.data,
-                        'creator_id': user_id
+                        'room': serializer.data
                     }
                 )
-
             return Response({'message': 'Room created', 'room': serializer.data}, status=status.HTTP_200_OK)
+
         return Response({'message': "Can't create room"}, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -185,17 +185,15 @@ class DeleteChatView(APIView):
     def delete(self, request, chat_id):
         try:
             chat_room = ChatRoom.objects.get(id=chat_id, users=request.user)
-            selected_users = chat_room.users.all()
+            other_user_ids = list(chat_room.users.exclude(id=request.user.id).values_list('id', flat=True))
             chat_room.delete()
 
-            user_id = request.user.id
-            for user in selected_users:
+            for user_id in other_user_ids:
                 async_to_sync(channel_layer.group_send)(
-                    f'user_{user.id}',
+                    f'user_{user_id}',
                     {
                         'type': 'delete_chat',
-                        'room_id': chat_id,
-                        'creator_id': user_id
+                        'room_id': chat_id
                     }
                 )
 
