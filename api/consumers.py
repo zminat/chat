@@ -8,7 +8,6 @@ class RoomConsumer(AsyncWebsocketConsumer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.user_id = None
-        self.room_group_name = None
 
     async def connect(self):
         if self.scope['user'].is_authenticated:
@@ -16,17 +15,11 @@ class RoomConsumer(AsyncWebsocketConsumer):
         else:
             self.user_id = None
 
-        self.room_group_name = 'chat_rooms'
-
-        await self.channel_layer.group_add(
-            self.room_group_name,
-            self.channel_name
-        )
-
-        await self.channel_layer.group_add(
-            f'user_{self.user_id}',
-            self.channel_name
-        )
+        if self.user_id:
+            await self.channel_layer.group_add(
+                f'user_{self.user_id}',
+                self.channel_name
+            )
 
         await self.accept()
 
@@ -36,11 +29,6 @@ class RoomConsumer(AsyncWebsocketConsumer):
                 f'user_{self.user_id}',
                 self.channel_name
             )
-
-        await self.channel_layer.group_discard(
-            self.room_group_name,
-            self.channel_name
-        )
 
     async def new_chat(self, event):
         creator_id = event['creator_id']

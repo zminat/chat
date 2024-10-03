@@ -117,14 +117,15 @@ class CreateChatView(APIView):
             chat_room.users.set(selected_users)
             serializer = ChatRoomSerializer(chat_room)
 
-            async_to_sync(channel_layer.group_send)(
-                'chat_rooms',
-                {
-                    'type': 'new_chat',
-                    'room': serializer.data,
-                    'creator_id': user_id
-                }
-            )
+            for user in selected_users:
+                async_to_sync(channel_layer.group_send)(
+                    f'user_{user.id}',
+                    {
+                        'type': 'new_chat',
+                        'room': serializer.data,
+                        'creator_id': user_id
+                    }
+                )
 
             return Response({'message': 'Room created', 'room': serializer.data}, status=status.HTTP_200_OK)
         return Response({'message': "Can't create room"}, status=status.HTTP_400_BAD_REQUEST)
@@ -182,17 +183,19 @@ class DeleteChatView(APIView):
     def delete(self, request, chat_id):
         try:
             chat_room = ChatRoom.objects.get(id=chat_id, users=request.user)
+            selected_users = chat_room.users.all()
             chat_room.delete()
 
             user_id = request.user.id
-            async_to_sync(channel_layer.group_send)(
-                'chat_rooms',
-                {
-                    'type': 'delete_chat',
-                    'room_id': chat_id,
-                    'creator_id': user_id
-                }
-            )
+            for user in selected_users:
+                async_to_sync(channel_layer.group_send)(
+                    f'user_{user.id}',
+                    {
+                        'type': 'delete_chat',
+                        'room_id': chat_id,
+                        'creator_id': user_id
+                    }
+                )
 
             return Response({'message': 'Chat deleted successfully'}, status=status.HTTP_200_OK)
         except ChatRoom.DoesNotExist:
