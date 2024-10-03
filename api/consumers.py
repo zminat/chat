@@ -1,13 +1,12 @@
 import json
 import os
-
 from asgiref.sync import sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
 from .models import ChatRoom, Message
 
 class ChatConsumer(AsyncWebsocketConsumer):
     def __init__(self, *args, **kwargs):
-        super().__init__(args, kwargs)
+        super().__init__(*args, **kwargs)
         self.room_group_name = None
         self.room_id = None
 
@@ -50,6 +49,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 'type': 'chat_message',
                 'message': message,
                 'sender': user.username,
+                'sender_id': user.id,
                 'sender_avatar': sender_avatar,
                 'timestamp': message_instance.timestamp.isoformat(),
                 'sender_channel_name': self.channel_name
@@ -59,6 +59,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
     async def chat_message(self, event):
         message = event['message']
         sender = event['sender']
+        sender_id = event['sender_id']
         sender_avatar = event['sender_avatar']
         timestamp = event['timestamp']
         sender_channel_name = event['sender_channel_name']
@@ -68,6 +69,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 'type': 'chat_message',
                 'message': message,
                 'sender': sender,
+                'sender_id': sender_id,
                 'sender_avatar': sender_avatar,
                 'timestamp': timestamp
             }))

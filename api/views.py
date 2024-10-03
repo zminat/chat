@@ -36,6 +36,7 @@ def homepage(request):
         messages_with_avatars.append({
             'text': message.text,
             'sender': message.sender,
+            'sender_id': message.sender.id,
             'avatar': sender_avatar
         })
 
@@ -104,7 +105,7 @@ class CreateChatView(APIView):
                 room_users = set(room.users.all())
                 if room_users == set(selected_users):
                     serializer = ChatRoomSerializer(room)
-                    return Response({'message': 'Room created', 'room': serializer.data}, status=status.HTTP_200_OK)
+                    return Response({'message': 'Room existed', 'room': serializer.data}, status=status.HTTP_200_OK)
 
             chat_room = ChatRoom.objects.create()
             chat_room.users.set(selected_users)
@@ -143,12 +144,16 @@ class MessageListView(ListAPIView):
             messages_with_avatars.append({
                 'text': message.text,
                 'sender': message.sender.username,
+                'sender_id': message.sender.id,
                 'sender_avatar': sender_avatar,
                 'timestamp': message.timestamp.isoformat()
             })
 
         return Response({
-            'current_user': request.user.username,
+            'current_user': {
+                'username': request.user.username,
+                'id': request.user.id
+            },
             'messages': messages_with_avatars
         })
 

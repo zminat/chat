@@ -24,6 +24,90 @@ class ChatApp {
         }
     }
 
+    createTooltip(target, username, userId) {
+        let tooltip = document.querySelector('.tooltip');
+        if (tooltip){
+            tooltip.remove();
+        }
+
+        tooltip = this.createElementWithClasses('div', ['tooltip']);
+        tooltip.textContent = `${username}`;
+        const button = this.createElementWithClasses('button', ['tooltip-button']);
+        button.textContent = 'Перейти к беседе';
+
+        tooltip.appendChild(button);
+        document.body.appendChild(tooltip);
+
+        const rect = target.getBoundingClientRect();
+        tooltip.style.bottom = `${window.innerHeight - rect.top + 5}px`;
+        tooltip.style.left = `${rect.left + window.scrollX}px`;
+
+        button.addEventListener('click', async () => {
+            try {
+                const chatRoom = await this.findOrCreateChat(userId);
+                await this.openChatRoom(chatRoom.id);
+                tooltip.remove();
+            } catch (error) {
+                console.error('Ошибка создания чата:', error);
+            }
+        });
+
+        setTimeout(() => {
+            tooltip.remove();
+        }, 5000);
+    }
+
+    async findOrCreateChat(userId) {
+        const formData = new FormData();
+        formData.append('users', userId);
+
+        try {
+            const response = await fetch(`/api/createchat/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': this.getCookie('csrftoken'),
+                    'Accept': 'application/json',
+                },
+                body: formData
+            });
+            const data = await response.json();
+            if (response.ok) {
+                const chatRoom = data.room;
+                this.addChatRoomToList(chatRoom);
+                await this.openChatRoom(chatRoom.id);
+                return chatRoom;
+            } else {
+                console.error('Ошибка создания чата:', data.message);
+            }
+        } catch (error) {
+            console.error('Ошибка:', error);
+        }
+    }
+
+    addChatRoomToList(chatRoom) {
+        const chatList = document.querySelector('.chat-list');
+
+        let existingChatItem = document.querySelector(`.chat-item[data-chat-id="${chatRoom.id}"]`);
+        if (!existingChatItem) {
+            const chatItem = this.createChatItem(chatRoom);
+            chatList.prepend(chatItem);
+            this.chatItemSubscribe(chatItem);
+        }
+    }
+
+
+    async openChatRoom(chatId) {
+        const chatItems = document.querySelectorAll('.chat-item');
+        chatItems.forEach(i => i.classList.remove('selected'));
+
+        const chatItem = document.querySelector(`.chat-item[data-chat-id="${chatId}"]`);
+        if (chatItem) {
+            chatItem.classList.add('selected');
+            chatItem.parentElement.prepend(chatItem);
+            await this.loadChatMessages(chatId);
+        }
+    }
+
     getCookie(name) {
         let cookieValue = null;
         if (document.cookie && document.cookie !== '') {
@@ -56,7 +140,6 @@ class ChatApp {
                         'X-CSRFToken': csrfToken,
                         'Accept': 'application/json',
                     },
-                    mode: 'same-origin',
                     body: formData
                 });
 
@@ -66,6 +149,7 @@ class ChatApp {
                     await this.createChatElements();
                     this.editProfileSubscribe();
                     this.logoutSubscribe();
+                    this.newChatSubscribe();
                     await this.fillChatList();
                     await this.selectFirstChat();
                 } else {
@@ -106,6 +190,7 @@ class ChatApp {
         const avatarImage = document.createElement('img');
         avatarImage.src = avatarUrl;
         avatarImage.alt = "Аватар";
+        avatarImage.dataset.userId = data.user_id;
         avatar.appendChild(avatarImage);
 
         const dropdownMenu = this.createElementWithClasses('div', ['dropdown-menu']);
@@ -314,7 +399,8 @@ class ChatApp {
                 const response = await fetch('/api/updateprofile/', {
                     method: 'POST',
                     headers: {
-                        'X-CSRFToken': csrfToken
+                        'X-CSRFToken': csrfToken,
+                        'Accept': 'application/json',
                     },
                     body: formData
                 });
@@ -529,7 +615,6 @@ class ChatApp {
                         'X-CSRFToken': csrfToken,
                         'Accept': 'application/json',
                     },
-                    mode: 'same-origin',
                     body: formData
                 });
 
@@ -656,7 +741,6 @@ class ChatApp {
                         'X-CSRFToken': csrfToken,
                         'Accept': 'application/json',
                     },
-                    mode: 'same-origin',
                     body: formData
                 });
 
@@ -743,25 +827,16 @@ class ChatApp {
         chatMessagesContainer.innerHTML = '';
 
         messages.forEach(message => {
-            const messageContainer = this.createElementWithClasses('div', ['message-container']);
-            messageContainer.classList.add(message.sender === currentUser ? 'sent-container' : 'received-container');
+            const isCurrentUser = message.sender_id === currentUser.id;
 
-            const avatarImage = this.createElementWithClasses('img', ['message-avatar']);
-            avatarImage.src = `/${message.sender_avatar}`;
-
-            const messageDiv = this.createElementWithClasses('div', ['message']);
-            messageDiv.classList.add(message.sender === currentUser ? 'sent' : 'received');
-            messageDiv.textContent = message.text;
-
-            if (message.sender !== currentUser) {
-                messageContainer.appendChild(avatarImage);
-                messageContainer.appendChild(messageDiv);
-            } else {
-                messageContainer.appendChild(messageDiv);
-                messageContainer.appendChild(avatarImage);
-            }
-
-            chatMessagesContainer.appendChild(messageContainer);
+            this.addMessageToChat(
+                message.text,
+                isCurrentUser ? 'sent' : 'received',
+                message.sender_avatar,
+                message.sender,
+                message.sender_id,
+                currentUser.id
+            );
         });
 
         this.scrollToBottom();
@@ -786,9 +861,17 @@ class ChatApp {
         this.socket.onmessage = (event) => {
             const data = JSON.parse(event.data);
             if (data.type === 'chat_message') {
-                this.addMessageToChat(data.message, 'received', data.sender_avatar);
+                this.addMessageToChat(
+                    data.message,
+                    'received',
+                    data.sender_avatar,
+                    data.sender,
+                    data.sender_id,
+                    currentUser.id
+                );
             }
         };
+
 
         const sendButton = document.querySelector('.chat-input button');
         const messageInput = document.querySelector('.chat-input input');
@@ -824,22 +907,37 @@ class ChatApp {
     }
 
     sendMessage(message) {
-        this.socket.send(JSON.stringify({type: 'message', message}));
-        this.addMessageToChat(message, 'sent');
+        this.socket.send(JSON.stringify({
+            type: 'message',
+            message: message,
+        }));
+
+        this.addMessageToChat(message, 'sent', this.getCurrentUserAvatar(), null, this.getCurrentUserId(), this.getCurrentUserId());
     }
 
-    addMessageToChat(message, messageType) {
+    getCurrentUserId() {
+        return document.querySelector('.avatar img').dataset.userId;
+    }
+
+    getCurrentUserAvatar() {
+        return document.querySelector('.sidebar .avatar img').src;
+    }
+
+    addMessageToChat(message, messageType, avatarUrl, senderName, senderId, currentUserId) {
         const chatMessages = document.querySelector('.chat-messages');
         const messageContainer = this.createElementWithClasses('div', ['message-container']);
         messageContainer.classList.add(messageType === 'sent' ? 'sent-container' : 'received-container');
 
         const avatarImage = this.createElementWithClasses('img', ['message-avatar']);
+        avatarImage.src = avatarUrl || '/static/images/avatars/default.jpg';
+        avatarImage.dataset.userId = senderId;
 
-        if (messageType === 'sent') {
-            const userAvatarElement = document.querySelector('.sidebar .avatar img');
-            avatarImage.src = userAvatarElement ? userAvatarElement.src : '/static/images/avatars/default.jpg';
-        } else {
-            avatarImage.src = message.avatar || '/static/images/avatars/default.jpg';
+        const isCurrentUser = senderId === currentUserId;
+
+        if (!isCurrentUser) {
+            avatarImage.addEventListener('mouseover', () => {
+                this.createTooltip(avatarImage, senderName, senderId);
+            });
         }
 
         const messageDiv = this.createElementWithClasses('div', ['message', messageType]);
@@ -856,6 +954,7 @@ class ChatApp {
         chatMessages.appendChild(messageContainer);
         chatMessages.scrollTop = chatMessages.scrollHeight;
     }
+
 
     createElementWithClasses(tag, classes) {
         const element = document.createElement(tag);

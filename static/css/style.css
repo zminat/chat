@@ -197,6 +197,33 @@ h2 {
     background-color: #a29bfe;
 }
 
+.tooltip {
+    position: absolute;
+    background-color: #343a40;
+    color: white;
+    padding: 10px;
+    border-radius: 5px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.tooltip-button {
+    margin-top: 10px;
+    padding: 5px 10px;
+    background-color: #007bff;
+    border: none;
+    color: white;
+    border-radius: 3px;
+    cursor: pointer;
+}
+
+.tooltip-button:hover {
+    background-color: #0056b3;
+}
+
 .chat-input {
     display: flex;
     border-top: 1px solid #ddd;
