@@ -162,6 +162,18 @@ class EditChatView(APIView):
         return Response({'message': "Can't update room"}, status=status.HTTP_400_BAD_REQUEST)
 
 
+class DeleteChatView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, chat_id):
+        try:
+            chat_room = ChatRoom.objects.get(id=chat_id, users=request.user)
+            chat_room.delete()
+            return Response({'message': 'Chat deleted successfully'}, status=status.HTTP_200_OK)
+        except ChatRoom.DoesNotExist:
+            return Response({'message': 'Chat not found or access denied'}, status=status.HTTP_404_NOT_FOUND)
+
+
 class ChatListView(APIView):
     permission_classes = [IsAuthenticated]
 

@@ -824,9 +824,9 @@ class ChatApp {
         });
 
         deleteButtons.forEach(button => {
-            button.addEventListener('click', (event) => {
+            button.addEventListener('click', async (event) => {
                 const chatId = event.target.closest('.chat-item').dataset.chatId;
-                console.log(`Удаление чата с ID: ${chatId}`);
+                await this.deleteChat(chatId);
             });
         });
     }
@@ -852,7 +852,6 @@ class ChatApp {
             console.error('Ошибка загрузки пользователей:', error);
         }
     }
-
 
     createEditChatElements(users) {
         const body = document.body;
@@ -909,11 +908,47 @@ class ChatApp {
         deleteIcon.src = '/static/images/delete-icon.png';
         deleteDiv.appendChild(deleteIcon);
 
-        deleteDiv.addEventListener('click', () => {
-            console.log(`Удаление чата с ID: ${chatId}`);  // В будущем сюда добавится логика удаления
+        deleteDiv.addEventListener('click', async () => {
+            await this.deleteChat(chatId);
         });
 
         return deleteDiv;
+    }
+
+    async deleteChat(chatId) {
+        const confirmation = confirm('Вы уверены, что хотите удалить этот чат?');
+        if (!confirmation) return;
+
+        try {
+            const response = await fetch(`/api/deletechat/${chatId}/`, {
+                method: 'DELETE',
+                headers: {
+                    'X-CSRFToken': this.getCookie('csrftoken'),
+                    'Accept': 'application/json',
+                }
+            });
+
+            const data = await response.json();
+            if (response.ok) {
+                await this.removeChatFromList(chatId);
+            } else {
+                console.error('Ошибка удаления чата:', data.message);
+            }
+        } catch (error) {
+            console.error('Ошибка удаления чата:', error);
+        }
+    }
+
+    async removeChatFromList(chatId) {
+        const chatItem = document.querySelector(`.chat-item[data-chat-id="${chatId}"]`);
+        if (chatItem) {
+            chatItem.remove();
+
+            const firstChatItem = document.querySelector('.chat-item');
+            if (firstChatItem) {
+                await this.selectFirstChat();
+            }
+        }
     }
 
     editChatFormSubmitSubscribe(chatId) {
