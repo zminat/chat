@@ -796,22 +796,32 @@ class ChatApp {
         }
         chatItem.dataset.chatId = room.id;
 
-        const spanName = document.createElement('span');
+        let spanName = chatItem.querySelector('span');
+        if (!spanName) {
+            spanName = document.createElement('span');
+            chatItem.appendChild(spanName);
+        }
         spanName.textContent = room.users_list;
-        chatItem.append(spanName);
 
-        const buttonContainer = this.createElementWithClasses('div', ['chat-item-buttons']);
+        let buttonContainer = chatItem.querySelector('.chat-item-buttons');
+        if (!buttonContainer) {
+            buttonContainer = this.createElementWithClasses('div', ['chat-item-buttons']);
+            chatItem.appendChild(buttonContainer);
+        }
 
-        const editButton = this.createEditButton(room.id);
-        buttonContainer.appendChild(editButton);
+        if (!buttonContainer.querySelector('.edit-chat-button')) {
+            const editButton = this.createEditButton(room.id);
+            buttonContainer.appendChild(editButton);
+        }
 
-        const deleteButton = this.createDeleteButton(room.id);
-        buttonContainer.appendChild(deleteButton);
-
-        chatItem.appendChild(buttonContainer);
+        if (!buttonContainer.querySelector('.delete-chat-button')) {
+            const deleteButton = this.createDeleteButton(room.id);
+            buttonContainer.appendChild(deleteButton);
+        }
 
         return chatItem;
     }
+
 
     createEditButton(chatId) {
         const editDiv = this.createElementWithClasses('div', ['edit-chat-button']);
