@@ -25,7 +25,17 @@
         <h3>Беседы</h3>
         <div class="chat-list">
             {% for chat_room in chat_rooms %}
-            <div class="chat-item {% if forloop.first %}selected{% endif %}" data-chat-id="{{ chat_room.id }}">{{ chat_room }}</div>
+            <div class="chat-item {% if forloop.first %}selected{% endif %}" data-chat-id="{{ chat_room.id }}">
+                <span>{{ chat_room }}</span>
+                <div class="chat-item-buttons">
+                    <div class="edit-chat-button">
+                        <img src="{% static 'images/edit-icon.png' %}" alt="Редактировать" class="chat-edit-icon">
+                    </div>
+                    <div class="delete-chat-button">
+                        <img src="{% static 'images/delete-icon.png' %}" alt="Удалить" class="chat-delete-icon">
+                    </div>
+                </div>
+            </div>
             {% empty %}
             <p>У вас пока нет чатов.</p>
             {% endfor %}

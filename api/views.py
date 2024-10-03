@@ -116,6 +116,52 @@ class CreateChatView(APIView):
         return Response({'message': "Can't create room"}, status=status.HTTP_400_BAD_REQUEST)
 
 
+class ChatUsersView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, chat_id):
+        try:
+            chat_room = ChatRoom.objects.get(id=chat_id, users=request.user)
+            users_in_chat = chat_room.users.all()
+            all_users = User.objects.exclude(id=request.user.id)
+
+            user_data = []
+            for user in all_users:
+                user_data.append({
+                    'id': user.id,
+                    'username': user.username,
+                    'is_in_chat': user in users_in_chat,
+                })
+
+            return Response({'users': user_data}, status=status.HTTP_200_OK)
+        except ChatRoom.DoesNotExist:
+            return Response({'message': 'Chat room not found or access denied'}, status=status.HTTP_404_NOT_FOUND)
+
+
+class EditChatView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, chat_id):
+        users = request.data.getlist('users')
+        users.append(request.user.id)
+
+        selected_users = User.objects.filter(id__in=users)
+        if selected_users.exists():
+            possible_rooms = ChatRoom.objects.filter(users__in=selected_users).distinct()
+            for room in possible_rooms:
+                room_users = set(room.users.all())
+                if room_users == set(selected_users):
+                    serializer = ChatRoomSerializer(room)
+                    return Response({'message': 'Room existed', 'room': serializer.data}, status=status.HTTP_200_OK)
+
+            chat_room = ChatRoom.objects.get(id=chat_id)
+            chat_room.users.set(selected_users)
+            serializer = ChatRoomSerializer(chat_room)
+            return Response({'message': 'Room updated', 'room': serializer.data}, status=status.HTTP_200_OK)
+
+        return Response({'message': "Can't update room"}, status=status.HTTP_400_BAD_REQUEST)
+
+
 class ChatListView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -131,7 +177,7 @@ class MessageListView(ListAPIView):
     serializer_class = MessageSerializer
 
     def get_queryset(self):
-        chat_room_id = self.kwargs.get('chat_room_id')
+        chat_room_id = self.kwargs.get('chat_id')
         return Message.objects.filter(chat_room_id=chat_room_id).order_by('timestamp')
 
     def list(self, request, *args, **kwargs):

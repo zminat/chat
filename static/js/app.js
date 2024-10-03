@@ -12,6 +12,7 @@ class ChatApp {
             this.logoutSubscribe();
             this.newChatSubscribe();
             this.chatItemsSubscribe();
+            this.subscribeToEditAndDeleteButtons();
             await this.selectFirstChat();
             this.scrollToBottom();
         });
@@ -780,9 +781,173 @@ class ChatApp {
             chatItem = this.createElementWithClasses('div', ['chat-item']);
         }
         chatItem.dataset.chatId = room.id;
-        chatItem.textContent = room.users_list;
+
+        const spanName = document.createElement('span');
+        spanName.textContent = room.users_list;
+        chatItem.append(spanName);
+
+        const buttonContainer = this.createElementWithClasses('div', ['chat-item-buttons']);
+
+        const editButton = this.createEditButton(room.id);
+        buttonContainer.appendChild(editButton);
+
+        const deleteButton = this.createDeleteButton(room.id);
+        buttonContainer.appendChild(deleteButton);
+
+        chatItem.appendChild(buttonContainer);
 
         return chatItem;
+    }
+
+    createEditButton(chatId) {
+        const editDiv = this.createElementWithClasses('div', ['edit-chat-button']);
+        const editIcon = document.createElement('img');
+        editIcon.src = '/static/images/edit-icon.png';
+        editDiv.appendChild(editIcon);
+
+        editDiv.addEventListener('click', () => {
+            this.openEditChatModal(chatId);
+        });
+
+        return editDiv;
+    }
+
+    subscribeToEditAndDeleteButtons() {
+        const editButtons = document.querySelectorAll('.edit-chat-button');
+        const deleteButtons = document.querySelectorAll('.delete-chat-button');
+
+        editButtons.forEach(button => {
+            button.addEventListener('click', (event) => {
+                const chatId = event.target.closest('.chat-item').dataset.chatId;
+                this.openEditChatModal(chatId);
+            });
+        });
+
+        deleteButtons.forEach(button => {
+            button.addEventListener('click', (event) => {
+                const chatId = event.target.closest('.chat-item').dataset.chatId;
+                console.log(`Удаление чата с ID: ${chatId}`);
+            });
+        });
+    }
+
+    async openEditChatModal(chatId) {
+        try {
+            const response = await fetch(`/api/chat/${chatId}/users/`, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json'
+                }
+            });
+
+            const data = await response.json();
+            if (response.ok) {
+                this.createEditChatElements(data.users);
+                this.closeModalSubscribe();
+                this.editChatFormSubmitSubscribe(chatId);
+            } else {
+                console.error('Ошибка:', data.message);
+            }
+        } catch (error) {
+            console.error('Ошибка загрузки пользователей:', error);
+        }
+    }
+
+
+    createEditChatElements(users) {
+        const body = document.body;
+        const modal = this.createElementWithClasses('div', ['modal']);
+        body.appendChild(modal);
+
+        const modalContent = this.createElementWithClasses('div', ['modal-content']);
+        modal.appendChild(modalContent);
+
+        const closeModal = this.createElementWithClasses('span', ['close']);
+        closeModal.innerHTML = '&times;';
+        modalContent.appendChild(closeModal);
+
+        const h3 = this.createElementWithClasses('h3', []);
+        h3.textContent = 'Редактировать участников';
+        modalContent.appendChild(h3);
+
+        const editChatForm = this.createElementWithClasses('form', ['edit-chat-form']);
+        modalContent.appendChild(editChatForm);
+
+        const selectUsersLabel = document.createElement('label');
+        selectUsersLabel.htmlFor = 'users';
+        selectUsersLabel.textContent = 'Выберите участников:';
+        editChatForm.appendChild(selectUsersLabel);
+
+        const userList = this.createElementWithClasses('div', ['user-list']);
+        editChatForm.appendChild(userList);
+
+        users.forEach(user => {
+            const userItem = this.createElementWithClasses('div', ['user-item']);
+            userList.appendChild(userItem);
+
+            const userItemCheckbox = document.createElement('input');
+            userItemCheckbox.type = 'checkbox';
+            userItemCheckbox.name = 'users';
+            userItemCheckbox.value = user.id;
+            userItemCheckbox.checked = user.is_in_chat;
+            userItem.appendChild(userItemCheckbox);
+
+            const userItemLabel = document.createElement('label');
+            userItemLabel.textContent = user.username;
+            userItem.appendChild(userItemLabel);
+        });
+
+        const saveButton = this.createElementWithClasses('button', ['btn-submit']);
+        saveButton.type = 'submit';
+        saveButton.textContent = 'Сохранить';
+        editChatForm.appendChild(saveButton);
+    }
+
+    createDeleteButton(chatId) {
+        const deleteDiv = this.createElementWithClasses('div', ['delete-chat-button']);
+        const deleteIcon = document.createElement('img');
+        deleteIcon.src = '/static/images/delete-icon.png';
+        deleteDiv.appendChild(deleteIcon);
+
+        deleteDiv.addEventListener('click', () => {
+            console.log(`Удаление чата с ID: ${chatId}`);  // В будущем сюда добавится логика удаления
+        });
+
+        return deleteDiv;
+    }
+
+    editChatFormSubmitSubscribe(chatId) {
+        const form = document.querySelector('.edit-chat-form');
+        if (!form) return;
+
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const formData = new FormData(form);
+            const csrfToken = this.getCookie('csrftoken');
+
+            try {
+                const response = await fetch(`/api/editchat/${chatId}/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': csrfToken,
+                        'Accept': 'application/json',
+                    },
+                    body: formData
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    this.closeModal();
+                    const existingChatItem = document.querySelector(`.chat-item[data-chat-id="${data.room.id}"] span`);
+                    existingChatItem.textContent = data.room.users_list;
+                    await this.openChatRoom(data.room.id);
+                } else {
+                    console.error('Ошибка обновления чата:', data.message);
+                }
+            } catch (error) {
+                console.error('Ошибка:', error);
+            }
+        });
     }
 
     chatItemsSubscribe() {
