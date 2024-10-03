@@ -1128,7 +1128,7 @@ class ChatApp {
     updateChatHeader(roomName) {
         const chatHeader = document.querySelector('.chat-header h2');
         if (chatHeader) {
-            chatHeader.textContent = roomName;
+            chatHeader.textContent = roomName ? roomName : '';
         }
     }
 

@@ -45,10 +45,12 @@ def homepage(request):
             'avatar': sender_avatar
         })
 
+    selected_chat_room_name = selected_chat_room if selected_chat_room else ""
+
     context = {
         'user': user,
         'chat_rooms': chat_rooms,
-        'selected_chat_room': selected_chat_room,
+        'selected_chat_room': selected_chat_room_name,
         'messages': messages_with_avatars,
         'user_avatar': user_avatar
     }
