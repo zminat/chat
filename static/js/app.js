@@ -227,7 +227,6 @@ class ChatApp {
         chatContainer.appendChild(chatHeader);
 
         const h2 = this.createElementWithClasses('h2', ['h2']);
-        h2.textContent = 'Чат 1';
         chatHeader.appendChild(h2);
 
         const chatMessages = this.createElementWithClasses('div', ['chat-messages']);
@@ -1027,7 +1026,7 @@ class ChatApp {
         chatMessagesContainer.innerHTML = '';
 
         messages.forEach(message => {
-            const isCurrentUser = message.sender_id === currentUser.id;
+            const isCurrentUser = message.sender_id.toString() === currentUser.id.toString();
 
             this.addMessageToChat(
                 message.text,
@@ -1067,7 +1066,7 @@ class ChatApp {
                     data.sender_avatar,
                     data.sender,
                     data.sender_id,
-                    currentUser.id
+                    this.getCurrentUserId()
                 );
             }
         };
@@ -1132,7 +1131,7 @@ class ChatApp {
         avatarImage.src = avatarUrl || '/static/images/avatars/default.jpg';
         avatarImage.dataset.userId = senderId;
 
-        const isCurrentUser = senderId === currentUserId;
+        const isCurrentUser = senderId.toString() === currentUserId.toString();
 
         if (!isCurrentUser) {
             avatarImage.addEventListener('mouseover', () => {
