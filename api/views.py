@@ -3,6 +3,7 @@ import time
 
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
+from django.db.models import Max
 from django.shortcuts import render
 from rest_framework import status
 from rest_framework.generics import ListAPIView
@@ -19,7 +20,8 @@ def homepage(request):
         return render(request, 'index.html')
 
     user = request.user
-    chat_rooms = ChatRoom.objects.filter(users=user)
+    chat_rooms = ChatRoom.objects.filter(users=user).annotate(last_message_time=Max('messages__timestamp')).order_by('-last_message_time')
+
     selected_chat_room = chat_rooms.first()
     messages = Message.objects.filter(chat_room=selected_chat_room).select_related('sender') if selected_chat_room else []
 
@@ -119,9 +121,9 @@ class ChatListView(APIView):
 
     def get(self, request):
         user = request.user
-        chat_rooms = ChatRoom.objects.filter(users=user)
+        chat_rooms = ChatRoom.objects.filter(users=user).annotate(last_message_time=Max('messages__timestamp')).order_by('-last_message_time')
         serializer = ChatRoomSerializer(chat_rooms, many=True)
-        return Response({'message': 'Room created', 'rooms': serializer.data}, status=status.HTTP_200_OK)
+        return Response({'message': 'Rooms retrieved', 'rooms': serializer.data}, status=status.HTTP_200_OK)
 
 
 class MessageListView(ListAPIView):
