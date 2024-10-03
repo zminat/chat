@@ -15,7 +15,23 @@ class ChatApp {
             this.subscribeToEditAndDeleteButtons();
             await this.selectFirstChat();
             this.scrollToBottom();
+            this.connectChatRoomsSocket();
         });
+    }
+
+    connectChatRoomsSocket() {
+        this.chatRoomsSocket = new WebSocket(`ws://${window.location.host}/ws/chat/`, [], {
+            headers: {'Cookie': document.cookie}
+        });
+
+        this.chatRoomsSocket.onmessage = async (event) => {
+            const data = JSON.parse(event.data);
+            if (data.type === 'new_chat') {
+                this.addChatRoomToList(data.room);
+            } else if (data.type === 'delete_chat') {
+                await this.removeChatFromList(data.room_id, false);
+            }
+        };
     }
 
     scrollToBottom() {
@@ -95,7 +111,6 @@ class ChatApp {
             this.chatItemSubscribe(chatItem);
         }
     }
-
 
     async openChatRoom(chatId) {
         const chatItems = document.querySelectorAll('.chat-item');
@@ -929,7 +944,7 @@ class ChatApp {
 
             const data = await response.json();
             if (response.ok) {
-                await this.removeChatFromList(chatId);
+                await this.removeChatFromList(chatId, true);
             } else {
                 console.error('Ошибка удаления чата:', data.message);
             }
@@ -938,10 +953,12 @@ class ChatApp {
         }
     }
 
-    async removeChatFromList(chatId) {
+    async removeChatFromList(chatId, selectFirst) {
         const chatItem = document.querySelector(`.chat-item[data-chat-id="${chatId}"]`);
         if (chatItem) {
             chatItem.remove();
+
+            if (!selectFirst) return;
 
             const firstChatItem = document.querySelector('.chat-item');
             if (firstChatItem) {

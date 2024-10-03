@@ -1,6 +1,7 @@
 import os
 import time
 
+from asgiref.sync import async_to_sync
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
 from django.db.models import Max
@@ -13,7 +14,9 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from api.models import ChatRoom, Message
 from api.serializers import UserSerializer, ChatRoomSerializer, MessageSerializer
+from channels.layers import get_channel_layer
 
+channel_layer = get_channel_layer()
 
 def homepage(request):
     if request.user is None or request.user.is_anonymous:
@@ -98,7 +101,8 @@ class CreateChatView(APIView):
 
     def post(self, request):
         users = request.data.getlist('users')
-        users.append(request.user.id)
+        user_id = request.user.id
+        users.append(user_id)
 
         selected_users = User.objects.filter(id__in=users)
         if selected_users.exists():
@@ -112,6 +116,16 @@ class CreateChatView(APIView):
             chat_room = ChatRoom.objects.create()
             chat_room.users.set(selected_users)
             serializer = ChatRoomSerializer(chat_room)
+
+            async_to_sync(channel_layer.group_send)(
+                'chat_rooms',
+                {
+                    'type': 'new_chat',
+                    'room': serializer.data,
+                    'creator_id': user_id
+                }
+            )
+
             return Response({'message': 'Room created', 'room': serializer.data}, status=status.HTTP_200_OK)
         return Response({'message': "Can't create room"}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -169,6 +183,17 @@ class DeleteChatView(APIView):
         try:
             chat_room = ChatRoom.objects.get(id=chat_id, users=request.user)
             chat_room.delete()
+
+            user_id = request.user.id
+            async_to_sync(channel_layer.group_send)(
+                'chat_rooms',
+                {
+                    'type': 'delete_chat',
+                    'room_id': chat_id,
+                    'creator_id': user_id
+                }
+            )
+
             return Response({'message': 'Chat deleted successfully'}, status=status.HTTP_200_OK)
         except ChatRoom.DoesNotExist:
             return Response({'message': 'Chat not found or access denied'}, status=status.HTTP_404_NOT_FOUND)

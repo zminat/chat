@@ -4,7 +4,64 @@ from asgiref.sync import sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
 from .models import ChatRoom, Message
 
-class ChatConsumer(AsyncWebsocketConsumer):
+class RoomConsumer(AsyncWebsocketConsumer):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.user_id = None
+        self.room_group_name = None
+
+    async def connect(self):
+        if self.scope['user'].is_authenticated:
+            self.user_id = self.scope['user'].id
+        else:
+            self.user_id = None
+
+        self.room_group_name = 'chat_rooms'
+
+        await self.channel_layer.group_add(
+            self.room_group_name,
+            self.channel_name
+        )
+
+        await self.channel_layer.group_add(
+            f'user_{self.user_id}',
+            self.channel_name
+        )
+
+        await self.accept()
+
+    async def disconnect(self, close_code):
+        if self.user_id:
+            await self.channel_layer.group_discard(
+                f'user_{self.user_id}',
+                self.channel_name
+            )
+
+        await self.channel_layer.group_discard(
+            self.room_group_name,
+            self.channel_name
+        )
+
+    async def new_chat(self, event):
+        creator_id = event['creator_id']
+
+        if creator_id != self.scope["user"].id:
+            await self.send(text_data=json.dumps({
+                'type': 'new_chat',
+                'room': event['room']
+            }))
+
+    async def delete_chat(self, event):
+        creator_id = event['creator_id']
+
+        if creator_id != self.scope["user"].id:
+            await self.send(text_data=json.dumps({
+                'type': 'delete_chat',
+                'room_id': event['room_id']
+            }))
+
+
+class ChatMessageConsumer(AsyncWebsocketConsumer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.room_group_name = None
@@ -29,32 +86,33 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
     async def receive(self, text_data=None, bytes_data=None):
         text_data_json = json.loads(text_data)
-        message = text_data_json['message']
-        user = self.scope['user']
+        message = text_data_json.get('message')
 
-        chat_room = await sync_to_async(ChatRoom.objects.get)(id=self.room_id)
-        message_instance = await sync_to_async(Message.objects.create)(
-            sender=user,
-            chat_room=chat_room,
-            text=message
-        )
+        if message:
+            user = self.scope['user']
+            chat_room = await sync_to_async(ChatRoom.objects.get)(id=self.room_id)
+            message_instance = await sync_to_async(Message.objects.create)(
+                sender=user,
+                chat_room=chat_room,
+                text=message
+            )
 
-        sender_avatar = f'static/images/avatars/{user.id}.jpg'
-        if not os.path.exists(sender_avatar):
-            sender_avatar = 'static/images/avatars/default.jpg'
+            sender_avatar = f'static/images/avatars/{user.id}.jpg'
+            if not os.path.exists(sender_avatar):
+                sender_avatar = 'static/images/avatars/default.jpg'
 
-        await self.channel_layer.group_send(
-            self.room_group_name,
-            {
-                'type': 'chat_message',
-                'message': message,
-                'sender': user.username,
-                'sender_id': user.id,
-                'sender_avatar': sender_avatar,
-                'timestamp': message_instance.timestamp.isoformat(),
-                'sender_channel_name': self.channel_name
-            }
-        )
+            await self.channel_layer.group_send(
+                self.room_group_name,
+                {
+                    'type': 'chat_message',
+                    'message': message,
+                    'sender': user.username,
+                    'sender_id': user.id,
+                    'sender_avatar': sender_avatar,
+                    'timestamp': message_instance.timestamp.isoformat(),
+                    'sender_channel_name': self.channel_name
+                }
+            )
 
     async def chat_message(self, event):
         message = event['message']
