@@ -13,8 +13,9 @@
 <div class="container messenger-container">
     <div class="sidebar">
         <div class="avatar">
-            <img src="{% static 'images/avatar.jpg' %}" alt="Аватар" />
+            <img src="{{ avatar_url }}" alt="Аватар" />
             <div class="dropdown-menu">
+                <button class="dropdown-item edit-profile">Редактировать профиль</button>
                 <button class="dropdown-item logout">Выйти</button>
             </div>
         </div>

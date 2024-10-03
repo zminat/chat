@@ -1,8 +1,11 @@
+import os
+
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
 from django.shortcuts import render
 from rest_framework import status
 from rest_framework.generics import ListAPIView
+from rest_framework.parsers import MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -19,11 +22,14 @@ def homepage(request):
     selected_chat_room = chat_rooms.first()
     messages = Message.objects.filter(chat_room=selected_chat_room) if selected_chat_room else []
 
+    avatar_url = f'/static/images/avatars/{user.id}.jpg' if os.path.exists(f'static/images/avatars/{user.id}.jpg') else '/static/images/avatars/default.jpg'
+
     context = {
         'user': user,
         'chat_rooms': chat_rooms,
         'selected_chat_room': selected_chat_room,
         'messages': messages,
+        'avatar_url': avatar_url,
     }
     return render(request, 'chat.html', context)
 
@@ -117,3 +123,51 @@ class MessageListView(ListAPIView):
             'current_user': current_user,
             'messages': serializer.data
         })
+
+
+import time
+
+class GetProfileView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        avatar_path = f'static/images/avatars/{user.id}.jpg'
+
+        if not os.path.exists(avatar_path):
+            avatar_path = 'static/images/avatars/default.jpg'
+
+        timestamp = int(time.time())
+
+        return Response({
+            'username': user.username,
+            'user_id': user.id,
+            'avatar': f'{avatar_path}?t={timestamp}'
+        })
+
+
+class UpdateProfileView(APIView):
+    permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser]
+
+    def post(self, request):
+        user = request.user
+        username = request.data.get('username')
+        avatar = request.FILES.get('avatar')
+
+        if username:
+            user.username = username
+            user.save()
+
+        avatar_url = None
+        if avatar:
+            avatar_path = f'static/images/avatars/{user.id}.jpg'
+            with open(avatar_path, 'wb') as avatar_file:
+                for chunk in avatar.chunks():
+                    avatar_file.write(chunk)
+            avatar_url = f'static/images/avatars/{user.id}.jpg'
+
+        return Response({
+            'message': 'Profile updated',
+            'avatar': avatar_url or 'static/images/avatars/default.jpg'
+        }, status=status.HTTP_200_OK)

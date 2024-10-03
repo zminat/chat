@@ -8,6 +8,7 @@ class ChatApp {
         document.addEventListener('DOMContentLoaded', async () => {
             this.loginFormSubscribe();
             this.signupLinkSubscribe();
+            this.editProfileSubscribe();
             this.logoutSubscribe();
             this.newChatSubscribe();
             this.chatItemsSubscribe();
@@ -62,7 +63,8 @@ class ChatApp {
                 const data = await response.json();
                 if (response.ok) {
                     this.removeBodyElements();
-                    this.createChatElements();
+                    await this.createChatElements();
+                    this.editProfileSubscribe();
                     this.logoutSubscribe();
                     await this.fillChatList();
                     await this.selectFirstChat();
@@ -81,7 +83,7 @@ class ChatApp {
         document.body.innerHTML = '';
     }
 
-    createChatElements() {
+    async createChatElements() {
         const body = document.body;
         const container = this.createElementWithClasses('div', ['container', 'messenger-container']);
         body.appendChild(container);
@@ -92,13 +94,26 @@ class ChatApp {
         const avatar = this.createElementWithClasses('div', ['avatar']);
         sidebar.appendChild(avatar);
 
+        const response = await fetch('/api/getprofile/', {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+            }
+        });
+        const data = await response.json();
+        const avatarUrl = data.avatar ? `/${data.avatar}` : '/static/images/avatars/default.jpg';
+
         const avatarImage = document.createElement('img');
-        avatarImage.src = "/static/images/avatar.jpg";
+        avatarImage.src = avatarUrl;
         avatarImage.alt = "Аватар";
         avatar.appendChild(avatarImage);
 
         const dropdownMenu = this.createElementWithClasses('div', ['dropdown-menu']);
         avatar.appendChild(dropdownMenu);
+
+        const editProfileButton = this.createElementWithClasses('button', ['dropdown-item', 'edit-profile']);
+        editProfileButton.textContent = 'Редактировать профиль';
+        dropdownMenu.appendChild(editProfileButton);
 
         const logoutButton = this.createElementWithClasses('button', ['dropdown-item', 'logout']);
         logoutButton.textContent = 'Выйти';
@@ -146,6 +161,78 @@ class ChatApp {
         chatInput.appendChild(sendButton);
     }
 
+    createEditProfileElements() {
+        const body = document.body;
+
+        const modal = this.createElementWithClasses('div', ['modal']);
+
+        const modalContent = this.createElementWithClasses('div', ['modal-content']);
+        modal.appendChild(modalContent);
+
+        const closeModal = this.createElementWithClasses('span', ['close']);
+        closeModal.innerHTML = '&times;';
+        modalContent.appendChild(closeModal);
+
+        const h3 = this.createElementWithClasses('h3', []);
+        h3.textContent = 'Редактировать профиль';
+        modalContent.appendChild(h3);
+
+        const form = this.createElementWithClasses('form', ['edit-profile-form']);
+        form.enctype = 'multipart/form-data';
+        modalContent.appendChild(form);
+
+        const usernameLabel = this.createElementWithClasses('label', []);
+        usernameLabel.textContent = 'Имя пользователя:';
+        form.appendChild(usernameLabel);
+
+        const usernameInput = this.createElementWithClasses('input', []);
+        usernameInput.type = 'text';
+        usernameInput.name = 'username';
+        usernameInput.required = true;
+        form.appendChild(usernameInput);
+
+        const avatarLabel = this.createElementWithClasses('label', []);
+        avatarLabel.textContent = 'Аватар:';
+        form.appendChild(avatarLabel);
+
+        const avatarContainer = this.createElementWithClasses('div', ['avatar-container']);
+        form.appendChild(avatarContainer);
+
+        const avatarPreview = this.createElementWithClasses('img', ['avatar-preview']);
+        avatarPreview.alt = 'Текущий аватар';
+        avatarPreview.src = '';
+        avatarContainer.appendChild(avatarPreview);
+
+        const avatarInput = this.createElementWithClasses('input', []);
+        avatarInput.type = 'file';
+        avatarInput.name = 'avatar';
+        avatarContainer.appendChild(avatarInput);
+
+        const saveButton = this.createElementWithClasses('button', ['btn-submit']);
+        saveButton.type = 'submit';
+        saveButton.textContent = 'Сохранить';
+        form.appendChild(saveButton);
+
+        body.appendChild(modal);
+    }
+
+    avatarInputChangeSubscribe() {
+        const avatarInput = document.querySelector('input[name="avatar"]');
+        const avatarPreview = document.querySelector('.avatar-preview');
+
+        avatarInput.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    avatarPreview.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+
+
     async fillChatList() {
         try {
             const response = await fetch('/api/chatlist/', {
@@ -178,6 +265,75 @@ class ChatApp {
             const chatId = firstChatItem.dataset.chatId;
             await this.loadChatMessages(chatId);
         }
+    }
+
+    editProfileSubscribe() {
+        const editProfileButton = document.querySelector('.edit-profile');
+        if (!editProfileButton) return;
+
+        editProfileButton.addEventListener('click', async () => {
+            try {
+                const response = await fetch('/api/getprofile/', {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    this.createEditProfileElements();
+                    const usernameInput = document.querySelector('input[name="username"]');
+                    const avatarPreview = document.querySelector('.modal img');
+
+                    usernameInput.value = data.username;
+                    avatarPreview.src = `/${data.avatar}`;
+
+                    this.avatarInputChangeSubscribe();
+                    this.editProfileFormSubmitSubscribe();
+                    this.closeModalSubscribe();
+                } else {
+                    console.error('Ошибка:', data.message);
+                }
+            } catch (error) {
+                console.error('Ошибка получения профиля:', error);
+            }
+        });
+    }
+
+    editProfileFormSubmitSubscribe() {
+        const form = document.querySelector('.edit-profile-form');
+        if (!form) return;
+
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const formData = new FormData(form);
+            const csrfToken = this.getCookie('csrftoken');
+
+            try {
+                const response = await fetch('/api/updateprofile/', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': csrfToken
+                    },
+                    body: formData
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    const sidebarAvatar = document.querySelector('.sidebar .avatar img');
+                    if (sidebarAvatar) {
+                        sidebarAvatar.src = `/${data.avatar}?t=${new Date().getTime()}`;
+                    }
+                    this.closeModal();
+                } else {
+                    const data = await response.json();
+                    console.error('Ошибка сохранения профиля:', data.message);
+                }
+            } catch (error) {
+                console.error('Ошибка:', error);
+            }
+        });
     }
 
     logoutSubscribe() {
@@ -278,11 +434,11 @@ class ChatApp {
         const signupLink = document.querySelector('.signup-link a');
         if (!signupLink) return;
 
-        signupLink.addEventListener('click', (event) => {
+        signupLink.addEventListener('click', async (event) => {
             event.preventDefault();
             this.removeBodyElements();
             this.createSignupElements();
-            this.signupFormSubscribe();
+            await this.signupFormSubscribe();
         });
     }
 
@@ -380,7 +536,8 @@ class ChatApp {
                 const data = await response.json();
                 if (response.ok) {
                     this.removeBodyElements();
-                    this.createChatElements();
+                    await this.createChatElements();
+                    this.editProfileSubscribe();
                     this.logoutSubscribe();
                     this.newChatSubscribe();
                     await this.fillChatList();
@@ -412,7 +569,7 @@ class ChatApp {
                 const data = await response.json();
                 if (response.ok) {
                     this.createNewChatElements(data.users);
-                    this.closeCreateNewChatSubscribe();
+                    this.closeModalSubscribe();
                     this.createNewChatFormSubscribe();
                 } else {
                     console.error('Ошибка:', data.message);
@@ -468,17 +625,17 @@ class ChatApp {
 
         const createChatFormButton = document.createElement('button');
         createChatFormButton.type = 'submit';
-        createChatFormButton.classList.add('btn-create-chat');
+        createChatFormButton.classList.add('btn-submit');
         createChatFormButton.textContent = 'Создать беседу';
         createChatForm.appendChild(createChatFormButton);
     }
 
-    closeCreateNewChatSubscribe() {
+    closeModalSubscribe() {
         const closeModal = document.querySelector('.close');
-        closeModal.addEventListener('click', this.closeCreateNewChat);
+        closeModal.addEventListener('click', this.closeModal);
     }
 
-    closeCreateNewChat() {
+    closeModal() {
         const modal = document.querySelector('.modal');
         modal.remove();
     }
@@ -505,7 +662,7 @@ class ChatApp {
 
                 const data = await response.json();
                 if (response.ok) {
-                    this.closeCreateNewChat();
+                    this.closeModal();
                     const chatItem = this.createNewChatItem(data.room);
                     this.chatItemsSubscribe(chatItem);
                     await this.selectFirstChat();
