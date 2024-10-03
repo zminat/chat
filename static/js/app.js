@@ -743,10 +743,25 @@ class ChatApp {
         chatMessagesContainer.innerHTML = '';
 
         messages.forEach(message => {
+            const messageContainer = this.createElementWithClasses('div', ['message-container']);
+            messageContainer.classList.add(message.sender === currentUser ? 'sent-container' : 'received-container');
+
+            const avatarImage = this.createElementWithClasses('img', ['message-avatar']);
+            avatarImage.src = `/${message.sender_avatar}`;
+
             const messageDiv = this.createElementWithClasses('div', ['message']);
             messageDiv.classList.add(message.sender === currentUser ? 'sent' : 'received');
             messageDiv.textContent = message.text;
-            chatMessagesContainer.appendChild(messageDiv);
+
+            if (message.sender !== currentUser) {
+                messageContainer.appendChild(avatarImage);
+                messageContainer.appendChild(messageDiv);
+            } else {
+                messageContainer.appendChild(messageDiv);
+                messageContainer.appendChild(avatarImage);
+            }
+
+            chatMessagesContainer.appendChild(messageContainer);
         });
 
         this.scrollToBottom();
@@ -771,7 +786,7 @@ class ChatApp {
         this.socket.onmessage = (event) => {
             const data = JSON.parse(event.data);
             if (data.type === 'chat_message') {
-                this.addMessageToChat(data.message, 'received');
+                this.addMessageToChat(data.message, 'received', data.sender_avatar);
             }
         };
 
@@ -815,9 +830,30 @@ class ChatApp {
 
     addMessageToChat(message, messageType) {
         const chatMessages = document.querySelector('.chat-messages');
+        const messageContainer = this.createElementWithClasses('div', ['message-container']);
+        messageContainer.classList.add(messageType === 'sent' ? 'sent-container' : 'received-container');
+
+        const avatarImage = this.createElementWithClasses('img', ['message-avatar']);
+
+        if (messageType === 'sent') {
+            const userAvatarElement = document.querySelector('.sidebar .avatar img');
+            avatarImage.src = userAvatarElement ? userAvatarElement.src : '/static/images/avatars/default.jpg';
+        } else {
+            avatarImage.src = message.avatar || '/static/images/avatars/default.jpg';
+        }
+
         const messageDiv = this.createElementWithClasses('div', ['message', messageType]);
         messageDiv.textContent = message;
-        chatMessages.appendChild(messageDiv);
+
+        if (messageType === 'received') {
+            messageContainer.appendChild(avatarImage);
+            messageContainer.appendChild(messageDiv);
+        } else {
+            messageContainer.appendChild(messageDiv);
+            messageContainer.appendChild(avatarImage);
+        }
+
+        chatMessages.appendChild(messageContainer);
         chatMessages.scrollTop = chatMessages.scrollHeight;
     }
 

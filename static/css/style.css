@@ -160,21 +160,40 @@ h2 {
     border-bottom: 1px solid #ddd;
 }
 
+.message-container {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.message-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin: 0 10px;
+}
+
+.sent-container {
+    justify-content: flex-end;
+}
+
+.received-container {
+    justify-content: flex-start;
+}
+
 .message {
     padding: 10px 15px;
-    margin-bottom: 10px;
     border-radius: 15px;
     max-width: 60%;
     background-color: #dfe6e9;
 }
 
 .message.sent {
-    align-self: flex-end;
     background-color: #74b9ff;
 }
 
 .message.received {
-    align-self: flex-start;
     background-color: #a29bfe;
 }
 

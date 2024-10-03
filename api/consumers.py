@@ -1,4 +1,5 @@
 import json
+import os
 
 from asgiref.sync import sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
@@ -39,12 +40,17 @@ class ChatConsumer(AsyncWebsocketConsumer):
             text=message
         )
 
+        sender_avatar = f'static/images/avatars/{user.id}.jpg'
+        if not os.path.exists(sender_avatar):
+            sender_avatar = 'static/images/avatars/default.jpg'
+
         await self.channel_layer.group_send(
             self.room_group_name,
             {
                 'type': 'chat_message',
                 'message': message,
                 'sender': user.username,
+                'sender_avatar': sender_avatar,
                 'timestamp': message_instance.timestamp.isoformat(),
                 'sender_channel_name': self.channel_name
             }
@@ -53,6 +59,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
     async def chat_message(self, event):
         message = event['message']
         sender = event['sender']
+        sender_avatar = event['sender_avatar']
         timestamp = event['timestamp']
         sender_channel_name = event['sender_channel_name']
 
@@ -61,5 +68,6 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 'type': 'chat_message',
                 'message': message,
                 'sender': sender,
-                'timestamp': timestamp,
+                'sender_avatar': sender_avatar,
+                'timestamp': timestamp
             }))

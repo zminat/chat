@@ -1,4 +1,5 @@
 import os
+import time
 
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
@@ -16,21 +17,36 @@ from api.serializers import UserSerializer, ChatRoomSerializer, MessageSerialize
 def homepage(request):
     if request.user is None or request.user.is_anonymous:
         return render(request, 'index.html')
+
     user = request.user
     chat_rooms = ChatRoom.objects.filter(users=user)
-
     selected_chat_room = chat_rooms.first()
-    messages = Message.objects.filter(chat_room=selected_chat_room) if selected_chat_room else []
+    messages = Message.objects.filter(chat_room=selected_chat_room).select_related('sender') if selected_chat_room else []
 
-    avatar_url = f'/static/images/avatars/{user.id}.jpg' if os.path.exists(f'static/images/avatars/{user.id}.jpg') else '/static/images/avatars/default.jpg'
+    user_avatar = f'static/images/avatars/{user.id}.jpg'
+    if not os.path.exists(user_avatar):
+        user_avatar = 'static/images/avatars/default.jpg'
+
+    messages_with_avatars = []
+    for message in messages:
+        sender_avatar = f'static/images/avatars/{message.sender.id}.jpg'
+        if not os.path.exists(sender_avatar):
+            sender_avatar = 'static/images/avatars/default.jpg'
+
+        messages_with_avatars.append({
+            'text': message.text,
+            'sender': message.sender,
+            'avatar': sender_avatar
+        })
 
     context = {
         'user': user,
         'chat_rooms': chat_rooms,
         'selected_chat_room': selected_chat_room,
-        'messages': messages,
-        'avatar_url': avatar_url,
+        'messages': messages_with_avatars,
+        'user_avatar': user_avatar
     }
+
     return render(request, 'chat.html', context)
 
 
@@ -117,15 +133,25 @@ class MessageListView(ListAPIView):
 
     def list(self, request, *args, **kwargs):
         queryset = self.get_queryset()
-        serializer = self.get_serializer(queryset, many=True)
-        current_user = request.user.username
+        messages_with_avatars = []
+
+        for message in queryset:
+            sender_avatar = f'static/images/avatars/{message.sender.id}.jpg'
+            if not os.path.exists(sender_avatar):
+                sender_avatar = 'static/images/avatars/default.jpg'
+
+            messages_with_avatars.append({
+                'text': message.text,
+                'sender': message.sender.username,
+                'sender_avatar': sender_avatar,
+                'timestamp': message.timestamp.isoformat()
+            })
+
         return Response({
-            'current_user': current_user,
-            'messages': serializer.data
+            'current_user': request.user.username,
+            'messages': messages_with_avatars
         })
 
-
-import time
 
 class GetProfileView(APIView):
     permission_classes = [IsAuthenticated]

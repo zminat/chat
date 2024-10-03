@@ -13,7 +13,7 @@
 <div class="container messenger-container">
     <div class="sidebar">
         <div class="avatar">
-            <img src="{{ avatar_url }}" alt="Аватар" />
+            <img src="{{user_avatar}}" alt="Аватар" />
             <div class="dropdown-menu">
                 <button class="dropdown-item edit-profile">Редактировать профиль</button>
                 <button class="dropdown-item logout">Выйти</button>
@@ -37,7 +37,17 @@
         </div>
         <div class="chat-messages">
             {% for message in messages %}
-            <div class="message {% if message.sender == user %}sent{% else %}received{% endif %}">{{ message.text }}</div>
+            <div class="message-container {% if message.sender == user %}sent-container{% else %}received-container{% endif %}">
+                {% if message.sender != user %}
+                <img class="message-avatar" src="/{{ message.avatar }}" alt="Аватар">
+                {% endif %}
+                <div class="message {% if message.sender == user %}sent{% else %}received{% endif %}">
+                    {{ message.text }}
+                </div>
+                {% if message.sender == user %}
+                <img class="message-avatar" src="/{{ user_avatar }}" alt="Аватар">
+                {% endif %}
+            </div>
             {% endfor %}
         </div>
         <div class="chat-input">
@@ -46,6 +56,7 @@
         </div>
     </div>
 </div>
+
 
 </body>
 </html>
